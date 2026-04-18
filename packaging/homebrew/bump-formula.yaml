@@ -1,0 +1,162 @@
+# Copy this into the tap repo at `.github/workflows/bump-formula.yaml`.
+#
+# Prereqs in the tap repo (Typiqally/homebrew-lintropy):
+#   - Formula/lintropy.rb exists (seed from lintropy.rb.template)
+#   - Workflow permissions: read/write (Settings → Actions → General)
+#
+# How it fires:
+#   - repository_dispatch from the main repo's release workflow
+#     (event_type: bump-formula, client_payload.tag: v0.1.0). The main
+#     repo only dispatches for real tag pushes.
+#   - manual: workflow_dispatch with tag input. The tag must already
+#     point at a published GitHub release in Typiqally/lintropy, which
+#     is re-verified below before any formula edits happen.
+#
+# The main repo dispatches with a PAT stored as TAP_DISPATCH_TOKEN
+# (fine-grained, scope: contents:write on Typiqally/homebrew-lintropy).
+
+name: bump-formula
+
+on:
+  repository_dispatch:
+    types: [bump-formula]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: ver
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          DISPATCH_TAG: ${{ github.event.client_payload.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG:-$DISPATCH_TAG}"
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Refusing invalid tag: $TAG" >&2; exit 1 ;;
+          esac
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag points at a published release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          SRC_REPO: Typiqally/lintropy
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fails (non-zero) if the tag has no corresponding release.
+          RELEASE_JSON="$(gh release view "$TAG" --repo "$SRC_REPO" --json tagName,isDraft,isPrerelease)"
+          echo "$RELEASE_JSON"
+          IS_DRAFT="$(printf '%s' "$RELEASE_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["isDraft"])')"
+          if [ "$IS_DRAFT" != "False" ]; then
+            echo "Refusing to bump from a draft release: $TAG" >&2
+            exit 1
+          fi
+
+      - name: Download release SHA files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          SRC_REPO: Typiqally/lintropy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p shas
+          gh release download "$TAG" \
+            --repo "$SRC_REPO" \
+            --pattern '*.sha256' \
+            --dir shas
+          ls -la shas
+
+      - name: Extract SHAs
+        id: sha
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          extract() {
+            local f="shas/lintropy-${VERSION}-$1.tar.gz.sha256"
+            if [ ! -f "$f" ]; then
+              echo "Missing $f" >&2
+              exit 1
+            fi
+            awk '{print $1}' "$f"
+          }
+          ARM64="$(extract aarch64-apple-darwin)"
+          X86_64="$(extract x86_64-apple-darwin)"
+          LINUX="$(extract x86_64-unknown-linux-gnu)"
+          echo "arm64=$ARM64" >> "$GITHUB_OUTPUT"
+          echo "x86_64=$X86_64" >> "$GITHUB_OUTPUT"
+          echo "linux=$LINUX" >> "$GITHUB_OUTPUT"
+
+      - name: Patch formula
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          SHA_ARM64: ${{ steps.sha.outputs.arm64 }}
+          SHA_X86_64: ${{ steps.sha.outputs.x86_64 }}
+          SHA_LINUX: ${{ steps.sha.outputs.linux }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, pathlib
+          version   = os.environ["VERSION"]
+          sha_arm   = os.environ["SHA_ARM64"]
+          sha_intel = os.environ["SHA_X86_64"]
+          sha_linux = os.environ["SHA_LINUX"]
+
+          path = pathlib.Path("Formula/lintropy.rb")
+          src = path.read_text()
+
+          # version "X.Y.Z"
+          src = re.sub(r'version\s+"[^"]+"', f'version "{version}"', src, count=1)
+
+          # Each url/sha256 pair, identified by the target in the url.
+          def bump(block_re, sha):
+              pattern = re.compile(
+                  rf'(url\s+"[^"]*{block_re}[^"]*"\s*\n\s*sha256\s+")[^"]+(")',
+                  re.MULTILINE,
+              )
+              return pattern.sub(rf'\g<1>{sha}\g<2>', src, count=1)
+
+          src = bump(r'aarch64-apple-darwin',        sha_arm)
+          src = bump(r'x86_64-apple-darwin',         sha_intel)
+          src = bump(r'x86_64-unknown-linux-gnu',    sha_linux)
+
+          path.write_text(src)
+          print(src)
+          PY
+
+      - name: Commit and push
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet Formula/lintropy.rb; then
+            echo "Formula already up to date for $TAG"
+            exit 0
+          fi
+          git add Formula/lintropy.rb
+          git commit -m "lintropy ${VERSION}"
+          git push

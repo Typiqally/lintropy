@@ -3,7 +3,7 @@
 This example repo is the fixture for:
 
 ```console
-cargo run -p lintropy-cli -- check examples/rust-demo --config examples/rust-demo/lintropy.yaml
+cargo run -p lintropy -- check examples/rust-demo --config examples/rust-demo/lintropy.yaml
 ```
 
 The current active fixture only loads the rules in `.lintropy/`. Translated
@@ -55,7 +55,7 @@ Expected count: 13 diagnostics across 12 files.
 
 Autofix expectation:
 
-- `cargo run -p lintropy-cli -- check examples/rust-demo --config examples/rust-demo/lintropy.yaml --fix` rewrites the `no-unwrap` match in `src/main.rs` from `.unwrap()` to `.expect("TODO: handle error")`.
+- `cargo run -p lintropy -- check examples/rust-demo --config examples/rust-demo/lintropy.yaml --fix` rewrites the `no-unwrap` match in `src/main.rs` from `.unwrap()` to `.expect("TODO: handle error")`.
 - The same run also rewrites `samples/migrations/log_usage.rs` from `log::info!` to `tracing::info!`, and rewrites `samples/deprecations/old_config.rs` from `OldConfig::load()` to `AppConfig::from_env()`.
 - The `vec![macro_example.unwrap()]` line in `src/main.rs` is intentional and must not fire because `no-unwrap` excludes calls inside `macro_invocation`.
 - `samples/safety/with_comment.rs` is intentional and must not fire because `safety-comment-required` recognizes the preceding `// SAFETY:` comment.

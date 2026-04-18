@@ -1,0 +1,48 @@
+# Tap formula template.
+#
+# Copy to a separate repo `Typiqally/homebrew-lintropy` at
+# `Formula/lintropy.rb`. Replace placeholders after each release:
+#
+#   <VERSION>     e.g. 0.1.0
+#   <SHA_ARM64>   sha256 of lintropy-<VERSION>-aarch64-apple-darwin.tar.gz
+#   <SHA_X86_64>  sha256 of lintropy-<VERSION>-x86_64-apple-darwin.tar.gz
+#   <SHA_LINUX>   sha256 of lintropy-<VERSION>-x86_64-unknown-linux-gnu.tar.gz
+#
+# Install:
+#
+#   brew tap Typiqally/lintropy
+#   brew install lintropy
+
+class Lintropy < Formula
+  desc "Structural linter driven by tree-sitter queries and repo-local YAML rules"
+  homepage "https://github.com/Typiqally/lintropy"
+  version "<VERSION>"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/Typiqally/lintropy/releases/download/v#{version}/lintropy-#{version}-aarch64-apple-darwin.tar.gz"
+      sha256 "<SHA_ARM64>"
+    end
+    on_intel do
+      url "https://github.com/Typiqally/lintropy/releases/download/v#{version}/lintropy-#{version}-x86_64-apple-darwin.tar.gz"
+      sha256 "<SHA_X86_64>"
+    end
+  end
+
+  on_linux do
+    on_intel do
+      url "https://github.com/Typiqally/lintropy/releases/download/v#{version}/lintropy-#{version}-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "<SHA_LINUX>"
+    end
+  end
+
+  def install
+    bin.install "lintropy"
+    doc.install "README.md" if File.exist?("README.md")
+  end
+
+  test do
+    assert_match "lintropy", shell_output("#{bin}/lintropy --version")
+  end
+end

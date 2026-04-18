@@ -1,4 +1,7 @@
 severity: error
+description: |
+  Flags stray `dbg!()` macros. They leak into logs and slow hot
+  paths; delete or convert to proper tracing before merging.
 message: "stray dbg! — remove before merging"
 language: rust
 query: |

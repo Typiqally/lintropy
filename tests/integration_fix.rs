@@ -45,7 +45,7 @@ fn fix_removes_autofixable_no_unwrap_diagnostics() {
         .arg(&working)
         .arg("--fix")
         .assert()
-        .code(0);
+        .code(1);
 
     let after = fs::read_to_string(working.join("src/main.rs")).unwrap();
     assert!(
@@ -61,6 +61,7 @@ fn fix_removes_autofixable_no_unwrap_diagnostics() {
 
     // Re-running check should no longer report the now-fixed diagnostic.
     let second = lintropy().arg("check").arg(&working).output().unwrap();
+    assert_eq!(second.status.code(), Some(1));
     let out = String::from_utf8(second.stdout).unwrap();
     let unwrap_hits = out.matches("no-unwrap").count();
     assert_eq!(

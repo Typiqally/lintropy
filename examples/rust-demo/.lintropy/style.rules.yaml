@@ -1,6 +1,6 @@
 rules:
   - id: no-todo
-    include: ["examples/rust-demo/tests/**/*.rs"]
+    include: ["tests/**/*.rs"]
     message: "remove TODO comment before merge"
     language: rust
     query: |
@@ -8,7 +8,7 @@ rules:
         (#match? @match "TODO"))
 
   - id: user-use-builder
-    include: ["examples/rust-demo/src/**/*.rs"]
+    include: ["src/**/*.rs"]
     message: "build `User` with `User::builder()`; direct struct literal bypasses validation"
     language: rust
     query: |
