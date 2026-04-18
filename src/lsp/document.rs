@@ -7,7 +7,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use tower_lsp::lsp_types::Url;
+use tower_lsp::lsp_types::{Range, Url};
+
+use super::position::apply_change;
 
 /// Latest known state of a single open editor buffer.
 #[derive(Debug, Clone)]
@@ -32,10 +34,33 @@ impl DocumentStore {
         Self::default()
     }
 
-    /// Replace the full buffer for `uri` (didOpen / full didChange sync).
+    /// Replace the full buffer for `uri` (`didOpen`).
     pub fn set(&mut self, uri: Url, text: String, version: i32) {
         let path = uri_to_path(&uri).unwrap_or_else(|| PathBuf::from(uri.path()));
-        self.docs.insert(uri, Document { path, text, version });
+        self.docs.insert(
+            uri,
+            Document {
+                path,
+                text,
+                version,
+            },
+        );
+    }
+
+    /// Apply one incremental edit from a `didChange` notification.
+    ///
+    /// `range == None` is the full-sync fallback (some clients still send
+    /// it even with incremental negotiated); `range == Some(..)` patches
+    /// only that UTF-16 range.
+    ///
+    /// No-op if the URI isn't tracked (shouldn't happen — the client
+    /// always opens before changing — but we'd rather drop the edit than
+    /// synthesize a partial document from scratch).
+    pub fn apply_edit(&mut self, uri: &Url, range: Option<Range>, new_text: &str, version: i32) {
+        if let Some(doc) = self.docs.get_mut(uri) {
+            apply_change(&mut doc.text, range, new_text);
+            doc.version = version;
+        }
     }
 
     pub fn get(&self, uri: &Url) -> Option<&Document> {
