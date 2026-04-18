@@ -53,13 +53,14 @@ fn resolve_language(args: &TsParseArgs) -> Result<Language, CliError> {
 }
 
 fn available_langs() -> String {
-    #[allow(unused_mut)]
-    let mut langs = vec!["rust"];
-    #[cfg(feature = "lang-go")]
-    langs.push("go");
-    #[cfg(feature = "lang-python")]
-    langs.push("python");
-    #[cfg(feature = "lang-typescript")]
-    langs.push("typescript");
+    let langs: &[&str] = &[
+        "rust",
+        #[cfg(feature = "lang-go")]
+        "go",
+        #[cfg(feature = "lang-python")]
+        "python",
+        #[cfg(feature = "lang-typescript")]
+        "typescript",
+    ];
     langs.join("|")
 }

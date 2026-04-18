@@ -149,12 +149,12 @@ impl<'a> PreparedRules<'a> {
 /// the tsx-grammar compilation; for everything else (including `.ts`,
 /// `.d.ts`, and all non-TypeScript languages) we return the primary
 /// compilation.
-fn pick_compiled<'a>(rule: &'a RuleConfig, path: &Path) -> &'a tree_sitter::Query {
+fn pick_compiled<'a>(rule: &'a RuleConfig, _path: &Path) -> &'a tree_sitter::Query {
     let query_rule = rule
         .query_rule()
         .expect("lint_buffer only processes query rules");
     #[cfg(feature = "lang-typescript")]
-    if path.extension().and_then(|e| e.to_str()) == Some("tsx") {
+    if _path.extension().and_then(|e| e.to_str()) == Some("tsx") {
         if let Some(tsx) = &query_rule.compiled_tsx {
             return tsx;
         }

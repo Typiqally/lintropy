@@ -1,12 +1,25 @@
+#[cfg(any(
+    feature = "lang-go",
+    feature = "lang-python",
+    feature = "lang-typescript"
+))]
 use assert_cmd::Command;
-use tempfile::TempDir;
 
+#[cfg(any(
+    feature = "lang-go",
+    feature = "lang-python",
+    feature = "lang-typescript"
+))]
 fn fixture_root(lang: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/multilang")
         .join(lang)
 }
 
+#[cfg(feature = "lang-typescript")]
+use tempfile::TempDir;
+
+#[cfg(feature = "lang-typescript")]
 fn write(dir: &std::path::Path, rel: &str, contents: &str) {
     let path = dir.join(rel);
     if let Some(parent) = path.parent() {
@@ -38,11 +51,17 @@ query: |
     write(root, "src/lib.ts", "const x: number = 1;\n");
 
     let mut cmd = Command::cargo_bin("lintropy").unwrap();
-    cmd.current_dir(root).arg("check").arg("--format").arg("json");
+    cmd.current_dir(root)
+        .arg("check")
+        .arg("--format")
+        .arg("json");
     let output = cmd.output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("app.tsx"), "tsx match missing: {stdout}");
-    assert!(!stdout.contains("lib.ts"), "false positive on lib.ts: {stdout}");
+    assert!(
+        !stdout.contains("lib.ts"),
+        "false positive on lib.ts: {stdout}"
+    );
 }
 
 #[cfg(feature = "lang-go")]
@@ -50,7 +69,10 @@ query: |
 fn go_fixture_flags_fmt_println() {
     let root = fixture_root("go");
     let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
-    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    cmd.current_dir(&root)
+        .arg("check")
+        .arg("--format")
+        .arg("json");
     let output = cmd.output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("main.go"), "expected go diag: {stdout}");
@@ -62,7 +84,10 @@ fn go_fixture_flags_fmt_println() {
 fn python_fixture_flags_print_call() {
     let root = fixture_root("python");
     let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
-    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    cmd.current_dir(&root)
+        .arg("check")
+        .arg("--format")
+        .arg("json");
     let output = cmd.output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("app.py"), "expected python diag: {stdout}");
@@ -74,9 +99,15 @@ fn python_fixture_flags_print_call() {
 fn typescript_fixture_flags_console_log() {
     let root = fixture_root("typescript");
     let mut cmd = assert_cmd::Command::cargo_bin("lintropy").unwrap();
-    cmd.current_dir(&root).arg("check").arg("--format").arg("json");
+    cmd.current_dir(&root)
+        .arg("check")
+        .arg("--format")
+        .arg("json");
     let output = cmd.output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("app.ts"), "expected ts diag: {stdout}");
-    assert!(stdout.contains("no-console-log"), "rule id missing: {stdout}");
+    assert!(
+        stdout.contains("no-console-log"),
+        "rule id missing: {stdout}"
+    );
 }
