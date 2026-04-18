@@ -1,5 +1,9 @@
 severity: warning
-message: "avoid .unwrap() on `{{recv}}`; use .expect(\"...\") or ?"
+description: |
+  Flags `.unwrap()` on Result/Option outside macro bodies. Unwraps
+  panic in production paths; prefer `?`, `.expect("<context>")`, or
+  an explicit `match`.
+message: "avoid .unwrap() on `{{recv}}`"
 fix: '{{recv}}.expect("TODO: handle error")'
 language: rust
 query: |

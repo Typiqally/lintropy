@@ -1,4 +1,7 @@
 severity: info
+description: |
+  Highlights `TODO` comments so they get filed as tracker tickets
+  before merge. Untracked TODOs rot in the codebase.
 message: "TODO comment — track in issue tracker before merging"
 language: rust
 query: |
