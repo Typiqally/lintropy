@@ -11,6 +11,9 @@
 # VS Code
 .vscode/
 
+# Cursor / local history
+.history/
+
 # macOS
 .DS_Store
 
