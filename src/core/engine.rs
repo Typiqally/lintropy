@@ -49,6 +49,8 @@ pub struct PreparedRules<'a> {
     go: Vec<ScopedRule<'a>>,
     #[cfg(feature = "lang-python")]
     python: Vec<ScopedRule<'a>>,
+    #[cfg(feature = "lang-typescript")]
+    typescript: Vec<ScopedRule<'a>>,
 }
 
 struct ScopedRule<'a> {
@@ -65,6 +67,8 @@ impl<'a> PreparedRules<'a> {
         let mut go = Vec::new();
         #[cfg(feature = "lang-python")]
         let mut python = Vec::new();
+        #[cfg(feature = "lang-typescript")]
+        let mut typescript = Vec::new();
         for rule in &config.rules {
             let Some(language) = rule.language else {
                 continue;
@@ -83,6 +87,8 @@ impl<'a> PreparedRules<'a> {
                 crate::langs::Language::Go => go.push(scoped),
                 #[cfg(feature = "lang-python")]
                 crate::langs::Language::Python => python.push(scoped),
+                #[cfg(feature = "lang-typescript")]
+                crate::langs::Language::TypeScript => typescript.push(scoped),
             }
         }
         Ok(Self {
@@ -91,6 +97,8 @@ impl<'a> PreparedRules<'a> {
             go,
             #[cfg(feature = "lang-python")]
             python,
+            #[cfg(feature = "lang-typescript")]
+            typescript,
         })
     }
 
@@ -100,11 +108,7 @@ impl<'a> PreparedRules<'a> {
     /// detection (via extension) and include/exclude glob matching, and is
     /// propagated into each emitted [`Diagnostic`].
     pub fn lint_buffer(&self, path: &Path, src: &[u8]) -> Result<Vec<Diagnostic>> {
-        let Some(language) = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .and_then(crate::langs::Language::from_extension)
-        else {
+        let Some(language) = crate::langs::language_from_path(path) else {
             return Ok(Vec::new());
         };
 
@@ -114,6 +118,8 @@ impl<'a> PreparedRules<'a> {
             crate::langs::Language::Go => &self.go,
             #[cfg(feature = "lang-python")]
             crate::langs::Language::Python => &self.python,
+            #[cfg(feature = "lang-typescript")]
+            crate::langs::Language::TypeScript => &self.typescript,
         };
         if scoped_rules.is_empty() {
             return Ok(Vec::new());
