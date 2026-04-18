@@ -15,6 +15,7 @@ use clap::Parser;
 mod cli;
 mod commands;
 mod exit;
+mod agent_settings;
 mod walk;
 
 use crate::cli::{Cli, Command};
@@ -34,6 +35,7 @@ fn main() -> ExitCode {
 fn dispatch(cli: Cli) -> Result<u8, CliError> {
     match cli.command {
         Some(Command::Check(args)) => commands::check::run(args),
+        Some(Command::Hook(args)) => commands::hook::run(args),
         Some(Command::Explain(args)) => commands::explain::run(args),
         Some(Command::Rules(args)) => commands::rules::run(args),
         Some(Command::Init(args)) => commands::init::run(args),

@@ -6,6 +6,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::agent_settings;
 use crate::cli::InitArgs;
 use crate::commands::current_dir;
 use crate::exit::{CliError, EXIT_OK};
@@ -52,9 +53,8 @@ pub fn run(args: InitArgs) -> Result<u8, CliError> {
     println!("created {}", rule_path.display());
 
     if args.with_skill {
-        eprintln!(
-            "note: --with-skill is awaiting WP6 (SKILL.md authoring); skipping skill install."
-        );
+        agent_settings::merge_claude_settings(&root)?;
+        println!("updated {}", root.join(".claude/settings.json").display());
         let _ = args.skill_dir; // placeholder for WP6 wire-up
     }
 

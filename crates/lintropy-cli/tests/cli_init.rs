@@ -30,3 +30,18 @@ fn init_refuses_to_overwrite_existing_file() {
         .code(2)
         .stderr(predicate::str::contains("refusing to overwrite"));
 }
+
+#[test]
+fn init_with_skill_merges_claude_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    Command::cargo_bin("lintropy")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["init", "--with-skill"])
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains(".claude/settings.json"));
+
+    let settings = std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap();
+    assert!(settings.contains("lintropy hook --agent claude-code"));
+}

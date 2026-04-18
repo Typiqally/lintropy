@@ -1,8 +1,9 @@
-//! `clap`-derived command surface. Mirrors §9 minus `hook`.
+//! `clap`-derived command surface.
 
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use lintropy_core::Severity;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -20,6 +21,8 @@ pub struct Cli {
 pub enum Command {
     /// Walk PATHS, run every matching rule, and print diagnostics (default).
     Check(CheckArgs),
+    /// Process a single post-write hook event for an agent harness.
+    Hook(HookArgs),
     /// Describe a loaded rule by id.
     Explain(ExplainArgs),
     /// List every rule loaded from the config.
@@ -49,6 +52,45 @@ pub enum OutputFormat {
     Text,
     /// Canonical JSON envelope (§7.3 of the spec).
     Json,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum HookAgent {
+    /// Detect the harness from environment variables, Claude-first for phase 1.
+    #[default]
+    Auto,
+    /// Claude Code hook payloads and settings merge.
+    #[value(name = "claude-code")]
+    ClaudeCode,
+    /// Codex hook payloads (phase-2 stub for now).
+    Codex,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum HookFormat {
+    /// One compact line per diagnostic, plus an optional help line.
+    #[default]
+    Compact,
+    /// Canonical JSON envelope (§7.3).
+    Json,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum HookSeverity {
+    Info,
+    Warning,
+    #[default]
+    Error,
+}
+
+impl From<HookSeverity> for Severity {
+    fn from(value: HookSeverity) -> Self {
+        match value {
+            HookSeverity::Info => Severity::Info,
+            HookSeverity::Warning => Severity::Warning,
+            HookSeverity::Error => Severity::Error,
+        }
+    }
 }
 
 #[derive(Debug, Default, Args)]
@@ -83,6 +125,29 @@ pub struct CheckArgs {
     /// Suppress reporter output (exit code still reflects fail_on).
     #[arg(long)]
     pub quiet: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct HookArgs {
+    /// Override config discovery with an explicit path.
+    #[arg(long, value_name = "PATH")]
+    pub config: Option<PathBuf>,
+
+    /// Agent harness to target.
+    #[arg(long, value_enum, default_value_t = HookAgent::Auto)]
+    pub agent: HookAgent,
+
+    /// Output format for diagnostics written to stderr.
+    #[arg(long, value_enum, default_value_t = HookFormat::Compact)]
+    pub format: HookFormat,
+
+    /// Minimum severity that causes an exit status of 2.
+    #[arg(long = "fail-on", value_enum, default_value_t = HookSeverity::Error)]
+    pub fail_on: HookSeverity,
+
+    /// Emit non-blocking hook warnings to stderr.
+    #[arg(long, hide = true)]
+    pub verbose: bool,
 }
 
 #[derive(Debug, Args)]
