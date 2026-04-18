@@ -107,8 +107,10 @@ fn rules_text_group_by_language_produces_rust_group() {
         "unexpected (any) bucket in language-grouped output:\n{text}"
     );
 
-    // Every rule id appears after the header.
-    for id in ["bare", "no-dbg", "no-print", "no-unwrap"] {
+    // Rules that the spec pins as Rust must appear under the rust header.
+    // Other fixture rules are Rust today because MVP supports only Rust; when
+    // more languages land, `DescribeFixture` and this test should be revisited.
+    for id in ["no-dbg", "no-unwrap"] {
         let pos = text.find(id).unwrap_or_else(|| panic!("{id} missing"));
         assert!(
             pos > rust_header,

@@ -1,6 +1,6 @@
 //! `lintropy explain <rule-id>` — pretty-print a single rule.
 
-use lintropy_core::{RuleConfig, RuleKind};
+use lintropy_core::{RuleConfig, RuleKind, Severity};
 
 use crate::cli::ExplainArgs;
 use crate::commands::{load_config, print_warnings};
@@ -23,7 +23,7 @@ pub fn run(args: ExplainArgs) -> Result<u8, CliError> {
 
 fn print_rule(rule: &RuleConfig) {
     println!("rule:     {}", rule.id);
-    println!("severity: {:?}", rule.severity);
+    println!("severity: {}", severity_label(rule.severity));
     if let Some(lang) = rule.language {
         println!("language: {}", lang.name());
     }
@@ -83,6 +83,14 @@ fn print_rule(rule: &RuleConfig) {
         for line in fix.lines() {
             println!("  {line}");
         }
+    }
+}
+
+fn severity_label(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Error => "error",
+        Severity::Warning => "warning",
+        Severity::Info => "info",
     }
 }
 
