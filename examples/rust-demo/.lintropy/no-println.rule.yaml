@@ -1,0 +1,6 @@
+message: "avoid println! in committed code"
+language: rust
+query: |
+  (macro_invocation
+    macro: (identifier) @n
+    (#eq? @n "println")) @match

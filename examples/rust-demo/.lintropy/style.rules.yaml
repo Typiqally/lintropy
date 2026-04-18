@@ -1,0 +1,16 @@
+rules:
+  - id: no-todo
+    message: "remove TODO comment before merge"
+    language: rust
+    query: |
+      ((line_comment) @match
+        (#match? @match "TODO"))
+
+  - id: user-use-builder
+    message: "build `User` with `User::builder()`; direct struct literal bypasses validation"
+    language: rust
+    query: |
+      (struct_expression
+        name: (type_identifier) @ty
+        (#eq? @ty "User")
+        (#not-has-ancestor? @ty "call_expression" "arguments")) @match

@@ -1,0 +1,12 @@
+severity: warning
+message: "avoid .unwrap() on `{{recv}}`; use .expect(\"...\") or ?"
+fix: '{{recv}}.expect("TODO: handle error")'
+language: rust
+query: |
+  (call_expression
+    function: (field_expression
+      value: (_) @recv
+      field: (field_identifier) @method)
+    arguments: (arguments)
+    (#eq? @method "unwrap")
+    (#not-has-ancestor? @method "macro_invocation")) @match
