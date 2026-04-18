@@ -400,6 +400,10 @@ lintropy init                              # scaffold lintropy.yaml + .lintropy/
 lintropy schema                            # emit JSON Schema (LLM grounding)
 lintropy config validate [path]            # schema + queries + predicates, no run
 lintropy ts-parse <file> [--lang <name>]   # S-expression dump; query-iteration loop
+lintropy hook                              # post-write hook for Claude Code / Codex (§15)
+    [--agent claude-code|codex|auto]
+    [--format compact|json]
+    [--fail-on error|warning|info]
 ```
 
 **Deferred** (phase 2+): `check --changed [--since <ref>]`,
@@ -504,7 +508,9 @@ S-expression so agents iterate on queries. Language from extension,
 - Reporters: text + JSON (SARIF deferred).
 - Suppression (`// lintropy-ignore:` + `-ignore-file:`).
 - CLI: `check`, `explain`, `rules`, `init [--with-skill]`, `schema`,
-  `config validate`, `ts-parse`.
+  `config validate`, `ts-parse`, `hook`.
+- `lintropy hook` with Claude Code integration (§15); `init --with-skill`
+  merges the `PostToolUse` entry into `.claude/settings.json`.
 - `SKILL.md` embedded.
 - Example repo `examples/rust-demo/` with `no-unwrap`, `no-println`,
   `no-todo`, `user-use-builder`.
@@ -515,6 +521,8 @@ S-expression so agents iterate on queries. Language from extension,
 - Additional grammars: Go, TypeScript.
 - `check --changed [--since <ref>]` (`git2` dep).
 - SARIF output (`serde-sarif`).
+- `lintropy hook` Codex integration (`.codex/` config merge + `auto`
+  detection).
 
 ### Phase 3
 
@@ -579,7 +587,125 @@ rule logic.
 - `src/suppress.rs` — `// lintropy-ignore:` + `-ignore-file:` parsing +
   meta-rule for unused suppressions.
 
-## 15. Example repo
+## 15. Agent post-write hook integration
+
+Coding agents (Claude Code, Codex) fire **post-tool hooks** after file-write
+operations. `lintropy` ships a `lintropy hook` subcommand purpose-built to
+be wired in as such a hook: the agent writes a file, the hook runs lintropy
+scoped to that one file, and diagnostics flow back to the model as
+blocking feedback so it can self-correct before handing control back to
+the user.
+
+### 15.1 `lintropy hook` subcommand
+
+```
+lintropy hook [--agent claude-code|codex|auto]
+              [--format compact|json]
+              [--fail-on error|warning|info]
+```
+
+Behaviour:
+
+1. Read JSON from stdin (the hook event payload).
+2. Extract the target file path. Probe common keys in order:
+   `tool_input.file_path`, `tool_input.path`, `file_path`, `path`,
+   `filename`. First hit wins.
+3. If no path found, file doesn't exist, or the file doesn't match any
+   loaded rule's `include` / `exclude` → **exit 0 silently**. Never block
+   the agent on irrelevant writes.
+4. Run the same engine as `lintropy check`, scoped to that one file.
+5. Format diagnostics:
+   - `--format compact` (default) — one line per diagnostic, plus a
+     `help:` line for autofixes:
+     ```
+     src/handlers/users.rs:42:18 [warning] no-unwrap: avoid .unwrap() on `client`
+       help: replace with `client.expect("TODO: handle error")`
+     ```
+   - `--format json` — canonical JSON envelope (§7.3), scoped to that file.
+6. Write feedback to **stderr** (so the agent's hook framework picks it up
+   as the block reason).
+7. Exit code:
+   - `0` → no diagnostics at or above `--fail-on` (default `error`).
+   - `2` → diagnostics present at or above `--fail-on` → agent sees stderr
+     as blocking feedback, must address before continuing.
+   - Reserve `1` exclusively for normal `lintropy check` runs to avoid
+     confusion in shared logs.
+
+### 15.2 Settings
+
+New optional `hook:` sub-block under `settings:` in `lintropy.yaml`:
+
+```yaml
+settings:
+  fail_on: error                # for `lintropy check`
+  default_severity: error
+  hook:
+    fail_on: error              # threshold for `lintropy hook` exit-2
+    format: compact             # compact | json
+```
+
+CLI flags on `lintropy hook` override these.
+
+### 15.3 Installation via `init --with-skill`
+
+`lintropy init --with-skill` detects agent config dirs and writes the
+hook wiring:
+
+- **Claude Code** (`.claude/` present): merges into `.claude/settings.json`:
+
+  ```json
+  {
+    "hooks": {
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit|NotebookEdit",
+          "hooks": [
+            { "type": "command", "command": "lintropy hook --agent claude-code" }
+          ]
+        }
+      ]
+    }
+  }
+  ```
+
+  Idempotent merge — existing hooks preserved; a lintropy entry is
+  appended or replaced in place.
+
+- **Codex** (`.codex/` present): writes the equivalent entry into Codex's
+  hook config. Schema to be confirmed before phase-2 ship; until then
+  `init --with-skill` prints a copy-paste snippet with instructions.
+
+- Neither detected: prints snippets for both, no file written.
+
+`--agent auto` (default when the flag is omitted) sniffs well-known env
+vars set by each harness (`CLAUDE_CODE_HOOK`, `CODEX_HOOK_EVENT`, etc.) to
+pick the right payload-key heuristic and exit-code convention. Agent
+harnesses evolve — `auto` keeps the hook working without manual edits.
+
+### 15.4 Safeguards
+
+- **Malformed stdin** → exit 0 with a `warning` to stderr when `--verbose`
+  is set. Never block the agent because the hook itself choked.
+- **Config-load failures** inside the hook → exit 0. Don't block on a
+  broken config; the next `lintropy check` run surfaces the config error
+  loudly. Log to stderr for visibility.
+- **Internal timeout** at 10s (harness timeouts are typically 30s; fail
+  under them so the harness never has to kill us).
+- **Single-file scope** — never walks the tree. Walking a monorepo on
+  every keystroke is a non-starter.
+- **Respects `.gitignore`** — if the written file is ignored, exit 0
+  (same logic as `check`).
+- **Respects suppressions** — `// lintropy-ignore:` directives work
+  identically inside the hook path.
+
+### 15.5 Phasing
+
+Phase 1 ships `lintropy hook` with the Claude Code integration (payload
+heuristics + `.claude/settings.json` merge). Codex support lands phase 2
+once the hook schema is confirmed. `--agent auto` ships phase 1 with a
+Claude-Code-first heuristic; Codex detection added phase 2.
+
+## 16. Example repo
 
 `examples/rust-demo/`:
 
