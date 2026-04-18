@@ -47,6 +47,8 @@ pub struct PreparedRules<'a> {
     rust: Vec<ScopedRule<'a>>,
     #[cfg(feature = "lang-go")]
     go: Vec<ScopedRule<'a>>,
+    #[cfg(feature = "lang-python")]
+    python: Vec<ScopedRule<'a>>,
 }
 
 struct ScopedRule<'a> {
@@ -61,6 +63,8 @@ impl<'a> PreparedRules<'a> {
         let mut rust = Vec::new();
         #[cfg(feature = "lang-go")]
         let mut go = Vec::new();
+        #[cfg(feature = "lang-python")]
+        let mut python = Vec::new();
         for rule in &config.rules {
             let Some(language) = rule.language else {
                 continue;
@@ -77,12 +81,16 @@ impl<'a> PreparedRules<'a> {
                 crate::langs::Language::Rust => rust.push(scoped),
                 #[cfg(feature = "lang-go")]
                 crate::langs::Language::Go => go.push(scoped),
+                #[cfg(feature = "lang-python")]
+                crate::langs::Language::Python => python.push(scoped),
             }
         }
         Ok(Self {
             rust,
             #[cfg(feature = "lang-go")]
             go,
+            #[cfg(feature = "lang-python")]
+            python,
         })
     }
 
@@ -104,6 +112,8 @@ impl<'a> PreparedRules<'a> {
             crate::langs::Language::Rust => &self.rust,
             #[cfg(feature = "lang-go")]
             crate::langs::Language::Go => &self.go,
+            #[cfg(feature = "lang-python")]
+            crate::langs::Language::Python => &self.python,
         };
         if scoped_rules.is_empty() {
             return Ok(Vec::new());

@@ -12,6 +12,9 @@ pub enum Language {
     #[cfg(feature = "lang-go")]
     /// `tree-sitter-go`.
     Go,
+    #[cfg(feature = "lang-python")]
+    /// `tree-sitter-python`.
+    Python,
 }
 
 impl Language {
@@ -21,6 +24,8 @@ impl Language {
             "rust" => Some(Language::Rust),
             #[cfg(feature = "lang-go")]
             "go" => Some(Language::Go),
+            #[cfg(feature = "lang-python")]
+            "python" => Some(Language::Python),
             _ => None,
         }
     }
@@ -31,6 +36,8 @@ impl Language {
             "rs" => Some(Language::Rust),
             #[cfg(feature = "lang-go")]
             "go" => Some(Language::Go),
+            #[cfg(feature = "lang-python")]
+            "py" | "pyi" => Some(Language::Python),
             _ => None,
         }
     }
@@ -41,6 +48,8 @@ impl Language {
             Language::Rust => "rust",
             #[cfg(feature = "lang-go")]
             Language::Go => "go",
+            #[cfg(feature = "lang-python")]
+            Language::Python => "python",
         }
     }
 
@@ -50,6 +59,8 @@ impl Language {
             Language::Rust => &["rs"],
             #[cfg(feature = "lang-go")]
             Language::Go => &["go"],
+            #[cfg(feature = "lang-python")]
+            Language::Python => &["py", "pyi"],
         }
     }
 
@@ -62,6 +73,8 @@ impl Language {
             Language::Rust => tree_sitter_rust::language(),
             #[cfg(feature = "lang-go")]
             Language::Go => tree_sitter_go::language(),
+            #[cfg(feature = "lang-python")]
+            Language::Python => tree_sitter_python::language(),
         }
     }
 }
@@ -82,6 +95,8 @@ mod tests {
         assert_eq!(Language::from_extension("rs"), Some(Language::Rust));
         #[cfg(not(feature = "lang-go"))]
         assert_eq!(Language::from_extension("go"), None);
+        #[cfg(not(feature = "lang-python"))]
+        assert_eq!(Language::from_extension("py"), None);
         assert!(Language::Rust.extensions().contains(&"rs"));
     }
 
@@ -116,5 +131,32 @@ mod tests {
         parser.set_language(&lang).unwrap();
         let tree = parser.parse("package main\nfunc main() {}", None).unwrap();
         assert_eq!(tree.root_node().kind(), "source_file");
+    }
+
+    #[cfg(feature = "lang-python")]
+    #[test]
+    fn from_name_resolves_python() {
+        assert_eq!(Language::from_name("python"), Some(Language::Python));
+        assert_eq!(Language::Python.name(), "python");
+    }
+
+    #[cfg(feature = "lang-python")]
+    #[test]
+    fn from_extension_resolves_python_and_pyi() {
+        assert_eq!(Language::from_extension("py"), Some(Language::Python));
+        assert_eq!(Language::from_extension("pyi"), Some(Language::Python));
+        let exts = Language::Python.extensions();
+        assert!(exts.contains(&"py"));
+        assert!(exts.contains(&"pyi"));
+    }
+
+    #[cfg(feature = "lang-python")]
+    #[test]
+    fn python_ts_language_parses_hello_world() {
+        let lang = Language::Python.ts_language(std::path::Path::new("t.py"));
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&lang).unwrap();
+        let tree = parser.parse("def hi():\n    pass\n", None).unwrap();
+        assert_eq!(tree.root_node().kind(), "module");
     }
 }
