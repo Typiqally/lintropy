@@ -1,0 +1,13 @@
+{"run_id":"1776545912-976107000","line":139,"new":{"module_name":"reporters","snapshot_name":"text_reporter_color_on_and_off","metadata":{"source":"crates/lintropy-output/tests/reporters.rs","assertion_line":139,"expression":"warning[no-unwrap]: avoid .unwrap()\n  --> [TEMP]/src/main.rs:1:15\n   |\n1 | let _ = thing.unwrap();\n   |               ^^^^^^^^\n   |\n   = rule defined in: .lintropy/no-unwrap.rule.yaml\n   = see: lintropy explain no-unwrap\n   = docs: https://example.com/no-unwrap\n\nSummary: 1 warning across 1 file.\n"},"snapshot":"color_off"},"old":{"module_name":"reporters","metadata":{},"snapshot":"warning[no-unwrap]: avoid .unwrap()\n  --> [TEMP]/src/main.rs:1:15\n   |\n1 | let _ = thing.unwrap();\n   |               ^^^^^^^^\n   |\n   = rule defined in: .lintropy/no-unwrap.rule.yaml\n   = see: lintropy explain no-unwrap\n   = docs: https://example.com/no-unwrap\n\nSummary: 1 warning across 1 file."}}
+{"run_id":"1776545923-406100000","line":27,"new":null,"old":null}
+{"run_id":"1776545923-406100000","line":49,"new":null,"old":null}
+{"run_id":"1776545923-406100000","line":139,"new":null,"old":null}
+{"run_id":"1776545923-406100000","line":184,"new":null,"old":null}
+{"run_id":"1776545923-406100000","line":85,"new":null,"old":null}
+{"run_id":"1776545923-406100000","line":152,"new":{"module_name":"reporters","snapshot_name":"text_reporter_color_on_and_off-2","metadata":{"source":"crates/lintropy-output/tests/reporters.rs","assertion_line":152,"expression":"&on"},"snapshot":"warning[no-unwrap]: avoid .unwrap()\n  --> [TEMP]/src/main.rs:1:15\n   |\n1 | let _ = thing.unwrap();\n   |               ^^^^^^^^\n   |\n   = rule defined in: .lintropy/no-unwrap.rule.yaml\n   = see: lintropy explain no-unwrap\n   = docs: https://example.com/no-unwrap\n\nSummary: 1 warning across 1 file."},"old":{"module_name":"reporters","metadata":{},"snapshot":"\u001b[33mwarning\u001b[39m[no-unwrap]: avoid .unwrap()\n  --> [TEMP]/src/main.rs:1:15\n   |\n1 | let _ = thing.unwrap();\n   |               ^^^^^^^^\n   |\n   = rule defined in: .lintropy/no-unwrap.rule.yaml\n   = see: lintropy explain no-unwrap\n   = docs: https://example.com/no-unwrap\n\nSummary: 1 warning across 1 file."}}
+{"run_id":"1776545938-330917000","line":27,"new":null,"old":null}
+{"run_id":"1776545938-330917000","line":49,"new":null,"old":null}
+{"run_id":"1776545938-330917000","line":139,"new":null,"old":null}
+{"run_id":"1776545938-330917000","line":85,"new":null,"old":null}
+{"run_id":"1776545938-330917000","line":184,"new":null,"old":null}
+{"run_id":"1776545938-330917000","line":152,"new":null,"old":null}
