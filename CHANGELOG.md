@@ -44,5 +44,23 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
 - **CI.** fmt + clippy (`-D warnings`) + test matrix
   (`ubuntu-latest` + `macos-latest`) + non-blocking `cargo deny` on stable
   Rust 1.95.
+- **Language server.** `lintropy lsp` subcommand runs a `tower-lsp`-backed
+  Language Server Protocol server over stdio. Publishes diagnostics on
+  `didOpen`/`didChange`/`didSave`, applies `TextDocumentSyncKind::INCREMENTAL`
+  range edits in place, exposes autofixes as `CodeAction` + `WorkspaceEdit`
+  quickfixes, and reloads the rule set on `.lintropy/**/*.yaml` changes via
+  `didChangeWatchedFiles`.
+- **VS Code / Cursor extension.** `editors/vscode/lintropy/` packages a
+  `vscode-languageclient`-based extension that spawns `lintropy lsp` and
+  surfaces diagnostics, quickfixes, and config reload inside the editor.
+  Settings: `lintropy.enable`, `lintropy.path`, `lintropy.trace.server`.
+  Release workflow publishes `lintropy-<version>.vsix` as a GitHub release
+  asset alongside the CLI tarballs.
+- **JetBrains integration.** `editors/jetbrains/README.md` documents the
+  LSP4IJ-based setup that works on all JetBrains IDEs including free
+  Community editions.
+- **Init scaffolding.** `lintropy init` now creates
+  `.vscode/extensions.json` recommending `lintropy.lintropy` +
+  `redhat.vscode-yaml`. Skipped when the file already exists.
 
 [0.1.0]: https://github.com/anthropics/lintropy/releases/tag/v0.1.0

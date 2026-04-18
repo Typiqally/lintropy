@@ -68,3 +68,45 @@ fn init_with_skill_installs_skill_and_merges_settings_when_claude_present() {
         "expected PostToolUse entry with matcher + lintropy hook command, got {post:?}"
     );
 }
+
+#[test]
+fn init_scaffolds_vscode_extensions_json() {
+    let dir = tempfile::tempdir().unwrap();
+    lintropy()
+        .current_dir(dir.path())
+        .arg("init")
+        .assert()
+        .code(0);
+
+    let extensions = dir.path().join(".vscode/extensions.json");
+    assert!(
+        extensions.is_file(),
+        ".vscode/extensions.json must be created"
+    );
+    let payload: Value = serde_json::from_str(&fs::read_to_string(&extensions).unwrap()).unwrap();
+    let recs = payload["recommendations"].as_array().unwrap();
+    let ids: Vec<&str> = recs.iter().filter_map(|v| v.as_str()).collect();
+    assert!(ids.contains(&"lintropy.lintropy"), "{ids:?}");
+    assert!(ids.contains(&"redhat.vscode-yaml"), "{ids:?}");
+}
+
+#[test]
+fn init_does_not_clobber_existing_vscode_recommendations() {
+    let dir = tempfile::tempdir().unwrap();
+    let vscode_dir = dir.path().join(".vscode");
+    fs::create_dir_all(&vscode_dir).unwrap();
+    let preexisting = r#"{ "recommendations": ["esbenp.prettier-vscode"] }"#;
+    fs::write(vscode_dir.join("extensions.json"), preexisting).unwrap();
+
+    lintropy()
+        .current_dir(dir.path())
+        .arg("init")
+        .assert()
+        .code(0);
+
+    let after = fs::read_to_string(vscode_dir.join("extensions.json")).unwrap();
+    assert_eq!(
+        after, preexisting,
+        "existing extensions.json must not be overwritten"
+    );
+}

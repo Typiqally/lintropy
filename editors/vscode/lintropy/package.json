@@ -1,0 +1,75 @@
+{
+  "name": "lintropy",
+  "displayName": "Lintropy",
+  "description": "Live diagnostics and quickfixes from the lintropy structural linter.",
+  "version": "0.1.0",
+  "publisher": "lintropy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/lintropy"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "lintropy",
+    "linter",
+    "tree-sitter",
+    "lsp",
+    "rust"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:rust",
+    "workspaceContains:lintropy.yaml",
+    "workspaceContains:.lintropy/**"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Lintropy",
+      "properties": {
+        "lintropy.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the lintropy language server."
+        },
+        "lintropy.path": {
+          "type": "string",
+          "default": "lintropy",
+          "description": "Path to the lintropy binary. Falls back to PATH lookup if unset."
+        },
+        "lintropy.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace LSP traffic between VS Code and the server."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "lintropy.restart",
+        "title": "Lintropy: Restart Language Server"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "package": "vsce package --no-yarn --no-dependencies -o lintropy.vsix"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.1.0",
+    "typescript": "^5.4.0"
+  }
+}

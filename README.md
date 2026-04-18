@@ -232,6 +232,23 @@ The YAML schemas and the injected TextMate grammar work together: schema-backed
 validation for the file shape, TextMate syntax highlighting for the embedded
 S-expression.
 
+#### Live diagnostics (LSP)
+
+For inline red squigglies, hover messages, and quickfix lightbulbs, install
+the `lintropy` extension (`editors/vscode/lintropy/`):
+
+```console
+cd editors/vscode/lintropy
+npm install
+npm run compile
+npx vsce package -o lintropy.vsix
+code --install-extension lintropy.vsix      # or: cursor --install-extension ...
+```
+
+The extension spawns `lintropy lsp` as a subprocess and streams diagnostics
+over LSP. Settings: `lintropy.enable`, `lintropy.path`, `lintropy.trace.server`
+(see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
+
 ### JetBrains IDEs
 
 Shared mappings live in `.idea/jsonSchemas.xml`, pointing JetBrains IDEs at the
@@ -255,6 +272,17 @@ Then in JetBrains IDEs: `Settings → Editor → TextMate Bundles → +` and sel
 the extracted `Lintropy Query.tmbundle` directory. The bundle adds a TextMate
 injection that highlights YAML `query: |` blocks using the same
 `source.lintropy-query` grammar as the VS Code / Cursor extension.
+
+#### Live diagnostics (LSP)
+
+JetBrains IDEs plug into `lintropy lsp` through the
+[LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) community plugin.
+Full setup walkthrough (works on free Community editions too):
+[`editors/jetbrains/README.md`](editors/jetbrains/README.md).
+
+Short version: install LSP4IJ, add a new server with command `lintropy lsp`,
+map `*.rs → rust`. You get the same live diagnostics and quickfixes as the
+VS Code extension, routed through the standard JetBrains inspection UI.
 
 ## Status
 

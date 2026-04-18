@@ -19,6 +19,13 @@ const EXAMPLE_RULE_DIR: &str = ".lintropy";
 const EXAMPLE_RULE_FILE: &str = "no-unwrap.rule.yaml";
 const CLAUDE_MATCHER: &str = "Write|Edit|NotebookEdit";
 const LINTROPY_COMMAND: &str = "lintropy hook --agent claude-code";
+const VSCODE_EXTENSIONS: &str = r#"{
+  "recommendations": [
+    "lintropy.lintropy",
+    "redhat.vscode-yaml"
+  ]
+}
+"#;
 
 const ROOT_CONFIG_TEMPLATE: &str = r#"version: 1
 settings:
@@ -56,6 +63,8 @@ pub fn run(args: InitArgs) -> Result<u8, CliError> {
     let rule_path = rules_dir.join(EXAMPLE_RULE_FILE);
     write_once(&rule_path, EXAMPLE_RULE_TEMPLATE)?;
     println!("created {}", rule_path.display());
+
+    scaffold_vscode_recommendations(&root)?;
 
     if args.with_skill {
         install_skill(&root, args.skill_dir.as_deref())?;
@@ -170,6 +179,23 @@ fn print_snippets() {
     );
     println!();
     println!("Codex: phase-2 — schema TBD.");
+}
+
+/// Write `.vscode/extensions.json` recommending the lintropy + YAML
+/// extensions. Non-invasive: skips when the file already exists so users
+/// who have their own recommendations list aren't clobbered.
+fn scaffold_vscode_recommendations(root: &Path) -> Result<(), CliError> {
+    let target = root.join(".vscode").join("extensions.json");
+    if target.exists() {
+        println!("skipped {} (already present)", target.display());
+        return Ok(());
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    atomic_write(&target, VSCODE_EXTENSIONS.as_bytes())?;
+    println!("created {}", target.display());
+    Ok(())
 }
 
 fn write_once(path: &Path, contents: &str) -> Result<(), CliError> {
