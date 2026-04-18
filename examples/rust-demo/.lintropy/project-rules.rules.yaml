@@ -1,0 +1,117 @@
+rules:
+  - id: domain-no-infra
+    include: ["examples/rust-demo/samples/architecture/**/*.rs"]
+    severity: error
+    message: "domain crate must not depend on infra (found `use {{path}}`)"
+    language: rust
+    query: |
+      (use_declaration
+        argument: [
+          (scoped_identifier) @path
+          (scoped_use_list) @path
+          (use_as_clause) @path
+        ]
+        (#match? @path "^(crate::)?infra(::|$)")) @match
+
+  - id: use-tracing-not-log
+    include: ["examples/rust-demo/samples/migrations/**/*.rs"]
+    severity: warning
+    message: "use `tracing::{{level}}!` instead of `log::{{level}}!`"
+    fix: "tracing::{{level}}!{{args}}"
+    language: rust
+    query: |
+      (macro_invocation
+        macro: (scoped_identifier
+          path: (identifier) @ns
+          name: (identifier) @level)
+        (token_tree) @args
+        (#eq? @ns "log")
+        (#match? @level "^(trace|debug|info|warn|error)$")) @match
+
+  - id: no-dbg
+    include: ["examples/rust-demo/samples/banned/**/*.rs"]
+    severity: error
+    message: "stray `dbg!` in sample code"
+    language: rust
+    query: |
+      (macro_invocation
+        macro: (identifier) @name
+        (#eq? @name "dbg")) @match
+
+  - id: test-name-prefix
+    include: ["examples/rust-demo/samples/tests/**/*.rs"]
+    severity: warning
+    message: "test function `{{name}}` must start with `test_`"
+    language: rust
+    query: |
+      (source_file
+        (attribute_item
+          (attribute
+            (scoped_identifier
+              path: (identifier) @ns
+              name: (identifier) @attr)))
+        (function_item
+          name: (identifier) @name) @match
+        (#eq? @ns "tokio")
+        (#eq? @attr "test")
+        (#not-match? @name "^test_"))
+
+  - id: todo-needs-ticket
+    include: ["examples/rust-demo/samples/comments/**/*.rs"]
+    severity: warning
+    message: "TODO/FIXME comments must include a ticket id, e.g. `// TODO(PROJ-123): ...`"
+    language: rust
+    query: |
+      ((line_comment) @c
+        (#match? @c "^// (TODO|FIXME)\\b")
+        (#not-match? @c "^// (TODO|FIXME)\\([A-Z]+-[0-9]+\\):")) @match
+
+  - id: safety-comment-required
+    include: ["examples/rust-demo/samples/safety/**/*.rs"]
+    severity: error
+    message: "`unsafe` block needs a `// SAFETY:` comment explaining invariants"
+    language: rust
+    query: |
+      ((unsafe_block) @match
+        (#not-has-preceding-comment? @match "^// SAFETY:"))
+
+  - id: metric-naming
+    include: ["examples/rust-demo/samples/taxonomy/**/*.rs"]
+    severity: error
+    message: "metric name {{name}} doesn't match required taxonomy `app.<domain>.<event>`"
+    language: rust
+    query: |
+      (macro_invocation
+        macro: (scoped_identifier
+          path: (identifier) @ns
+          name: (identifier) @kind)
+        (token_tree (string_literal) @name)
+        (#eq? @ns "metrics")
+        (#match? @kind "^(counter|gauge|histogram)$")
+        (#not-match? @name "^\"app\\.[a-z_]+\\.[a-z_]+\"$")) @match
+
+  - id: no-stray-ignore
+    include: ["examples/rust-demo/samples/tests/**/*.rs"]
+    exclude: ["examples/rust-demo/samples/tests/flaky/**"]
+    severity: error
+    message: "`#[ignore]` is only allowed under tests/flaky/"
+    language: rust
+    query: |
+      (attribute_item
+        (attribute (identifier) @attr)
+        (#eq? @attr "ignore")) @match
+
+  - id: old-config-removed-2026Q2
+    include: ["examples/rust-demo/samples/deprecations/**/*.rs"]
+    severity: error
+    message: "OldConfig::load is removed 2026-06-30; use AppConfig::from_env()"
+    fix: "AppConfig::from_env()"
+    language: rust
+    query: |
+      (call_expression
+        function: (scoped_identifier
+          path: (identifier) @ty
+          name: (identifier) @method)
+        arguments: (arguments)
+        (#eq? @ty "OldConfig")
+        (#eq? @method "load")) @match

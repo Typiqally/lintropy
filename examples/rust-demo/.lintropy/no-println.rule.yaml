@@ -1,3 +1,4 @@
+include: ["examples/rust-demo/src/**/*.rs"]
 message: "avoid println! in committed code"
 language: rust
 query: |

@@ -1,4 +1,5 @@
 severity: warning
+include: ["examples/rust-demo/src/**/*.rs"]
 message: "avoid .unwrap() on `{{recv}}`; use .expect(\"...\") or ?"
 fix: '{{recv}}.expect("TODO: handle error")'
 language: rust
