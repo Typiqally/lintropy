@@ -15,7 +15,7 @@ pub fn run(args: TsParseArgs) -> Result<u8, CliError> {
 
     let mut parser = Parser::new();
     parser
-        .set_language(&language.ts_language())
+        .set_language(&language.ts_language(&args.file))
         .map_err(|err| CliError::internal(format!("set_language: {err}")))?;
     let tree = parser
         .parse(&source, None)

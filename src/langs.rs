@@ -43,7 +43,10 @@ impl Language {
     }
 
     /// Native `tree-sitter` language handle for the grammar.
-    pub fn ts_language(self) -> TsLanguage {
+    ///
+    /// `path` picks between multi-grammar languages (TypeScript's
+    /// `typescript` vs `tsx`). Other variants ignore it.
+    pub fn ts_language(self, _path: &std::path::Path) -> TsLanguage {
         match self {
             Language::Rust => tree_sitter_rust::language(),
         }
@@ -70,7 +73,7 @@ mod tests {
 
     #[test]
     fn ts_language_loads() {
-        let lang = Language::Rust.ts_language();
+        let lang = Language::Rust.ts_language(std::path::Path::new("t.rs"));
         let mut parser = tree_sitter::Parser::new();
         parser.set_language(&lang).unwrap();
         let tree = parser.parse("fn main() {}", None).unwrap();

@@ -99,7 +99,7 @@ impl<'a> PreparedRules<'a> {
 
         let mut parser = Parser::new();
         parser
-            .set_language(&language.ts_language())
+            .set_language(&language.ts_language(path))
             .map_err(|err| {
                 LintropyError::Internal(format!(
                     "failed to load parser for {}: {err}",

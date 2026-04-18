@@ -399,7 +399,7 @@ fn build_query_kind(
         ))
     })?;
     let query_source = raw.query.clone().expect("caller guarantees query rule");
-    let compiled = TsQuery::new(&language.ts_language(), &query_source).map_err(|e| {
+    let compiled = TsQuery::new(&language.ts_language(source_path), &query_source).map_err(|e| {
         LintropyError::QueryCompile {
             rule_id: id.to_string(),
             source_path: source_path.to_path_buf(),

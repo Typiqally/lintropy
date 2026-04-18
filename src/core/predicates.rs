@@ -249,14 +249,14 @@ mod tests {
     fn rust_tree(src: &str) -> tree_sitter::Tree {
         let mut parser = Parser::new();
         parser
-            .set_language(&Language::Rust.ts_language())
+            .set_language(&Language::Rust.ts_language(std::path::Path::new("t.rs")))
             .expect("rust parser");
         parser.parse(src, None).expect("tree")
     }
 
     #[test]
     fn parses_general_predicates_per_pattern() {
-        let language = Language::Rust.ts_language();
+        let language = Language::Rust.ts_language(std::path::Path::new("t.rs"));
         let query = Query::new(
             &language,
             r#"
@@ -279,7 +279,7 @@ mod tests {
     #[test]
     fn applies_ancestor_predicate() {
         let src = "fn main() { let value = user.unwrap(); }";
-        let language = Language::Rust.ts_language();
+        let language = Language::Rust.ts_language(std::path::Path::new("t.rs"));
         let query = Query::new(
             &language,
             r#"
@@ -312,7 +312,7 @@ mod tests {
     #[test]
     fn applies_parent_and_sibling_predicates() {
         let src = "fn main() { let value = user.unwrap(); }";
-        let language = Language::Rust.ts_language();
+        let language = Language::Rust.ts_language(std::path::Path::new("t.rs"));
         let query = Query::new(
             &language,
             r#"
@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn applies_preceding_comment_predicate() {
         let src = "// SAFETY: checked above\nfn dangerous() {}";
-        let language = Language::Rust.ts_language();
+        let language = Language::Rust.ts_language(std::path::Path::new("t.rs"));
         let query = Query::new(&language, r#"(function_item) @match"#).unwrap();
         let tree = rust_tree(src);
         let mut cursor = QueryCursor::new();
