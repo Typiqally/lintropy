@@ -125,7 +125,7 @@ fn text_reporter_color_on_and_off() {
 
     let mut off = Vec::new();
     TextReporter::new(Box::new(&mut off), ColorChoice::Never)
-        .report(&[diagnostic.clone()], &summary(0, 1, 0, 1))
+        .report(std::slice::from_ref(&diagnostic), &summary(0, 1, 0, 1))
         .unwrap();
 
     let mut on = Vec::new();

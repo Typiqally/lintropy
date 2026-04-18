@@ -149,6 +149,7 @@ struct RawRule {
     #[serde(default)]
     require: Option<String>,
     #[serde(default)]
+    #[allow(dead_code)]
     multiline: Option<bool>,
     #[serde(default)]
     fix: Option<String>,

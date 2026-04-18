@@ -129,7 +129,7 @@ fn expect_capture(predicate: &tree_sitter::QueryPredicate, index: usize) -> Resu
     }
 }
 
-fn expect_string<'a>(predicate: &'a tree_sitter::QueryPredicate, index: usize) -> Result<&'a str> {
+fn expect_string(predicate: &tree_sitter::QueryPredicate, index: usize) -> Result<&str> {
     match predicate.args.get(index) {
         Some(QueryPredicateArg::String(value)) => Ok(value),
         other => Err(LintropyError::Internal(format!(
