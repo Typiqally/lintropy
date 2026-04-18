@@ -2,45 +2,66 @@
 
 # 🌿 Lintropy
 
-**A tree-sitter linter whose rules live in your repo — one YAML file each, written for humans and AI agents alike.**
+**The linter for rules your repo actually cares about.**
 
-[![status](https://img.shields.io/badge/status-draft_v0.1-orange)](specs/merged/)
+[![status](https://img.shields.io/badge/status-draft-orange)](#demo)
+[![rust](https://img.shields.io/badge/rust-1.83%2B-dea584)](https://www.rust-lang.org/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![rust](https://img.shields.io/badge/rust-1.75%2B-dea584)](https://www.rust-lang.org/)
-[![agent-native](https://img.shields.io/badge/agent-native-8A2BE2)](#why)
-
-<img src="docs/demo.gif" alt="Lintropy demo" width="720"/>
+[![agent native](https://img.shields.io/badge/agent-native-8b5cf6)](#built-for-agent-workflows)
+[![rules](https://img.shields.io/badge/rules-YAML-0ea5e9)](#how-it-works)
+[![engine](https://img.shields.io/badge/engine-tree--sitter-16a34a)](#how-it-works)
 
 </div>
 
 ---
 
-## The pitch
+Most linters ship a fixed catalog.
 
-Generic linters (Clippy, ESLint, Ruff) ship fixed catalogs. **Lintropy** inverts that: the interesting lints in any real codebase encode *your team's* conventions — architectural boundaries, migration deadlines, banned APIs, required ceremony.
+Lintropy does the opposite: the rules live in your repo, one YAML file at a
+time, and they describe **your** conventions:
 
-**Lintropy ships no catalog.** Every rule is a small YAML file an LLM (or a human) can author in under a minute.
+- API code must live in `src/api/`
+- feature modules cannot import each other directly
+- `dbg!`, `println!`, or `.unwrap()` are banned outside tests
+- migrations require rollback files
+- only one module can touch `process.env`
 
-## Why it's different
+This is linting for architecture, boundaries, migration policies, and team
+ceremony, not just style.
 
-| | Generic linters | Lintropy |
-|---|---|---|
-| Rule source | Shipped by tool author | Lives in *your* repo |
-| Authoring | Plugin / TS / Rust code | Single YAML file |
-| Agent support | Afterthought | First-class (SKILL.md + JSON Schema + hook) |
-| Scope | Language universals | *Your* team's conventions |
-| Deploy a rule | Publish a plugin | `git add .lintropy/my-rule.rule.yaml` |
+## Why Lintropy
 
-## ✨ Features
+Generic linters are great at universal rules. They are weak at codebase-local
+rules that only make sense inside one company, one monorepo, or one product.
 
-- 🤖 **Agent-native** — ships `SKILL.md` + JSON Schema so coding agents write correct rules first try.
-- 🪝 **Post-write hooks** — `lintropy hook` wires into Claude Code / Codex. Agent writes a file, diagnostics return as blocking feedback, model self-corrects before handing back.
-- 📄 **One rule, one file** — `.lintropy/no-unwrap.rule.yaml` *is* the rule. CODEOWNERS works. `git rm` disables.
-- 🎯 **Two primitives** — `query` (tree-sitter) for structure; `match` (regex) for text. That's the whole surface.
-- 🔧 **Autofix** — `{{capture}}`-interpolated replacements, `--fix` or `--fix-dry-run`.
-- 🗣 **Explainable** — every diagnostic names the file that defined the rule.
+Lintropy is built for that gap:
 
-## 📝 A rule, end-to-end
+- rules are stored in the repo
+- rules are easy to review and version
+- rules are simple enough for agents to generate
+- diagnostics tell you which rule file fired
+- tree-sitter handles structure, regex handles plain text
+
+## How it works
+
+Lintropy uses two rule types:
+
+- `query`: tree-sitter rules for structural patterns
+- `match`: regex rules for text patterns
+
+Typical layout:
+
+```text
+.
+├── lintropy.yaml
+└── .lintropy/
+    ├── no-unwrap.rule.yaml
+    ├── no-dbg.rule.yaml
+    └── architecture/
+        └── api-only-in-src-api.rule.yaml
+```
+
+Example rule:
 
 ```yaml
 # .lintropy/no-unwrap.rule.yaml
@@ -53,13 +74,24 @@ query: |
     function: (field_expression
       value: (_) @recv
       field: (field_identifier) @method)
-    (#eq? @method "unwrap")
-    (#not-has-ancestor? @method "macro_invocation")) @match
+    (#eq? @method "unwrap")) @match
 ```
+
+Minimal root config:
+
+```yaml
+version: 1
+
+settings:
+  fail_on: error
+  default_severity: error
+```
+
+## Demo
 
 ```console
 $ lintropy check
-warning[no-unwrap]: avoid .unwrap() on `client`
+warning[no-unwrap]: avoid .unwrap() on `client`; use .expect("...") or ?
   --> src/handlers/users.rs:42:18
    |
 42 |     let user = client.unwrap().get(id).await?;
@@ -67,58 +99,54 @@ warning[no-unwrap]: avoid .unwrap() on `client`
    |
    = rule defined in: .lintropy/no-unwrap.rule.yaml
 
-Summary: 1 warning across 1 file. 1 autofix available — re-run with --fix.
+error[api-only-in-src-api]: API handlers must live under src/api/
+  --> src/features/users/create_user.rs:1:1
+   |
+1  | pub async fn create_user(...) { ... }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = rule defined in: .lintropy/architecture/api-only-in-src-api.rule.yaml
+
+Summary: 1 error, 1 warning, 2 files affected.
 ```
 
-## 🚀 Quick start
+## Built for agent workflows
 
-```bash
-# install (placeholder)
-cargo install lintropy
+Lintropy is intentionally designed so Codex, Claude Code, and similar agents
+can write valid rules without a lot of prompting overhead.
 
-# scaffold config + agent SKILL.md + hook wiring
-lintropy init --with-skill
+- one rule per file
+- low-ceremony YAML
+- deterministic repo discovery
+- explainable diagnostics
+- schema-friendly config
+- hook-based workflows for post-edit feedback
 
-# run
-lintropy check
-lintropy check --fix            # apply autofixes
-lintropy explain no-unwrap      # show rule source
-lintropy ts-parse src/main.rs   # S-expression dump for query authoring
-```
+The idea is simple: if agents are writing code, they should also be able to
+write and respect the repo’s guardrails.
 
-## 🪝 Agent integration
+## What makes it different
 
-Wire `lintropy hook` into Claude Code's `PostToolUse` — every `Write` / `Edit` triggers a scoped lint, feedback flows back as blocking stderr:
+| | Generic linters | Lintropy |
+|---|---|---|
+| Rule source | Built into the tool | Lives in your repo |
+| Authoring | Plugin code or complex config | Small YAML files |
+| Scope | Language-wide conventions | Project-specific constraints |
+| Best use | Style and correctness | Architecture and boundaries |
+| Agent support | Incidental | First-class |
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "lintropy hook --agent claude-code" }]
-      }
-    ]
-  }
-}
-```
+## Roadmap
 
-`init --with-skill` merges this for you. Codex support lands phase 2.
+The current direction is:
 
-## 🗺 Roadmap
-
-| Phase | Scope |
-|---|---|
-| **1 — MVP** | Rust grammar, query rules, autofix, text+JSON output, Claude Code hook |
-| **2** | `match` regex rules, Go + TypeScript, SARIF, Codex hook, `--changed` |
-| **3** | Structured fix kinds (insert / move / create), regex autofix, `config explain` |
-| **v2+** | LSP, baselines, incremental cache, `extends:`, WASM plugins |
-
-## 📚 Docs
-
-- Design spec — [`specs/merged/2026-04-18-lintropy-merged.md`](specs/merged/2026-04-18-lintropy-merged.md)
-- Example repo — [`examples/rust-demo/`](examples/rust-demo/) *(coming with MVP)*
-- SKILL.md — generated into `.claude/skills/lintropy/` by `init --with-skill`
+- Rust-first support
+- repo-root `lintropy.yaml`
+- `.lintropy/**/*.rule.yaml` discovery
+- tree-sitter query rules
+- regex match rules
+- autofix for query-based replacements
+- text and JSON diagnostics
+- agent-oriented hooks and schema output
 
 ## License
 
