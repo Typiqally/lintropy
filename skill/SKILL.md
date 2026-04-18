@@ -1,4 +1,4 @@
-# version: 0.2.0
+# version: 0.3.0
 
 ## 1. What lintropy is
 
@@ -30,7 +30,7 @@ lintropy check --fix-dry-run                   # print unified diff, exit 0
 lintropy check --format json -o report.json    # machine-readable
 lintropy explain <rule-id>                     # message, query, fix, source
 lintropy rules [--format json]                 # list loaded rules
-lintropy ts-parse <file> [--lang rust]         # dump S-expression
+lintropy ts-parse <file> [--lang <name>]       # dump S-expression (auto-detects by extension)
 lintropy config validate                       # schema + queries, no run
 lintropy init [--with-skill]                   # scaffold config; install SKILL
 lintropy schema                                # JSON schema for the config
@@ -84,7 +84,7 @@ query: |                               # one of: query | forbid | require
     (#eq? @method "unwrap")) @match
 ```
 
-Field reference (§4.5):
+Field reference (§4.8):
 
 | key           | required                    | purpose                                          |
 |---------------|-----------------------------|--------------------------------------------------|
@@ -96,12 +96,16 @@ Field reference (§4.5):
 | `exclude`     | no                          | gitignore-style exclusive globs                  |
 | `tags`        | no                          | free-form                                        |
 | `docs_url`    | no                          | surfaced in diagnostics                          |
-| `language`    | yes when `query:` present   | `rust` (MVP)                                     |
+| `language`    | yes when `query:` present   | `rust` \| `go` \| `python` \| `typescript`       |
 | `query`       | one-of `query/forbid/require` | tree-sitter S-expression                       |
 | `forbid`      | one-of                      | regex; match = violation (phase 2)               |
 | `require`     | one-of                      | regex; absence = violation (phase 2)             |
 | `multiline`   | no (match rules only)       | regex `m`+`s` flags                              |
 | `fix`         | no (query rules only)       | replacement for `@match`; `{{capture}}` interp   |
+
+The CLI owns the extension-to-language mapping (`.rs` → rust, `.go` → go, `.py`/`.pyi` → python,
+`.ts`/`.tsx`/`.mts`/`.cts`/`.d.ts` → typescript). Rules declare `language:` and let the CLI route
+files. Extension mappings are not configurable.
 
 **`description` vs `message`** — keep them distinct:
 
@@ -164,11 +168,12 @@ Inline rules in `lintropy.yaml` work the same; `id` required there too.
 Never guess node kinds. Run:
 
 ```bash
-lintropy ts-parse src/some.rs --lang rust
+lintropy ts-parse src/some.rs
 ```
 
-It prints the S-expression. Copy the kinds you care about, then build
-the query bottom-up.
+It prints the S-expression. Language is auto-detected from the file extension.
+Pass `--lang <name>` only when the extension is unusual or ambiguous.
+Copy the kinds you care about, then build the query bottom-up.
 
 ### 4.2 `tree-sitter-rust` node-kind cheat sheet
 
@@ -193,7 +198,110 @@ the query bottom-up.
 | unsafe                     | `unsafe_block`                                                   |
 | arguments / tokens         | `arguments`, `parameters`, `token_tree`                          |
 
-### 4.3 Built-in predicates (free from `QueryCursor`)
+### 4.3 `tree-sitter-go` node-kind cheat sheet
+
+| node kind                     | what it matches                                        |
+|-------------------------------|--------------------------------------------------------|
+| `source_file`                 | top-level file                                         |
+| `function_declaration`        | `func Foo(...) { ... }`                                |
+| `method_declaration`          | `func (r Receiver) Foo(...) { ... }`                   |
+| `call_expression`             | `foo(a, b)`                                            |
+| `selector_expression`         | `pkg.Ident`                                            |
+| `identifier`                  | bare identifier                                        |
+| `field_identifier`            | field/method name after `.`                            |
+| `interpreted_string_literal`  | double-quoted string                                   |
+| `defer_statement`             | `defer foo()`                                         |
+| `go_statement`                | `go foo()`                                             |
+
+Worked example — `.lintropy/no-fmt-println.rule.yaml`:
+
+```yaml
+severity: warning
+description: |
+  Flags fmt.Println calls. Production code should emit structured logs
+  through a configured logger, not stdlib fmt.
+message: "avoid fmt.Println; use a structured logger"
+language: go
+query: |
+  (call_expression
+    function: (selector_expression
+      operand: (identifier) @pkg
+      field: (field_identifier) @fn)
+    (#eq? @pkg "fmt")
+    (#eq? @fn "Println")) @match
+```
+
+### 4.4 `tree-sitter-python` node-kind cheat sheet
+
+| node kind                   | what it matches                                    |
+|-----------------------------|----------------------------------------------------|
+| `module`                    | top-level file                                     |
+| `function_definition`       | `def foo(...):`                                    |
+| `call`                      | `foo(a, b)`                                        |
+| `attribute`                 | `obj.attr`                                         |
+| `identifier`                | bare identifier                                    |
+| `string`                    | string literal                                     |
+| `import_statement`          | `import foo`                                       |
+| `import_from_statement`     | `from foo import bar`                              |
+| `class_definition`          | `class Foo:`                                       |
+| `decorator`                 | `@foo`                                             |
+
+Worked example — `.lintropy/no-print-in-prod.rule.yaml`:
+
+```yaml
+severity: warning
+description: |
+  Flags bare print() calls. print() bypasses the logging module and
+  makes log levels/destinations unconfigurable in production.
+message: "avoid print(); use logging.getLogger(__name__)"
+language: python
+query: |
+  (call
+    function: (identifier) @fn
+    (#eq? @fn "print")) @match
+```
+
+### 4.5 `tree-sitter-typescript` node-kind cheat sheet
+
+| node kind                     | what it matches                                        |
+|-------------------------------|--------------------------------------------------------|
+| `program`                     | top-level file                                         |
+| `function_declaration`        | `function foo() { ... }`                               |
+| `arrow_function`              | `(x) => x`                                             |
+| `call_expression`             | `foo(a, b)`                                            |
+| `member_expression`           | `obj.prop` / `obj["prop"]`                             |
+| `identifier`                  | bare identifier                                        |
+| `property_identifier`         | property name after `.`                                |
+| `import_statement`            | `import ... from "mod"`                                |
+| `type_alias_declaration`      | `type T = ...`                                         |
+| `interface_declaration`       | `interface I { ... }`                                  |
+| `jsx_element` (tsx only)      | `<Foo>...</Foo>` (only present when parsing `.tsx`)    |
+
+Rule authors write `language: typescript` for both `.ts` and `.tsx`
+files. The CLI picks the `typescript` vs `tsx` grammar per file based
+on the extension. A rule using tsx-only node kinds (e.g. `jsx_element`)
+matches only in `.tsx` files — the same rule against `.ts` files
+silently produces zero diagnostics, which is correct.
+
+Worked example — `.lintropy/no-console-log.rule.yaml`:
+
+```yaml
+severity: warning
+description: |
+  Flags console.log calls. Shipping code should emit through a
+  structured logger so levels, sampling, and sinks are configurable.
+message: "avoid console.log; use a structured logger"
+language: typescript
+query: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @obj
+      property: (property_identifier) @prop)
+    (#eq? @obj "console")
+    (#eq? @prop "log")) @match
+```
+
+### 4.6 Built-in predicates (free from `QueryCursor`)
 
 | predicate                              | semantics                              |
 |----------------------------------------|----------------------------------------|
@@ -203,7 +311,7 @@ the query bottom-up.
 | `(#not-match? @cap "regex")`           | negation                               |
 | `(#any-of? @cap "a" "b" "c")`          | capture text ∈ set                     |
 
-### 4.4 Custom predicates (host-applied, §6)
+### 4.7 Custom predicates (host-applied, §6)
 
 | predicate                                  | semantics                               |
 |--------------------------------------------|-----------------------------------------|
@@ -220,14 +328,14 @@ Unknown predicate name = hard error at config load. No plugin system.
 Path-scoped predicates (`#filename-matches?`, `#in-file?`) are not
 provided — use `include` / `exclude` globs instead.
 
-### 4.5 `@match` convention
+### 4.8 `@match` convention
 
 Every query should capture a `@match` node; diagnostic span = the
 `@match` capture, else the match root. A rule without `@match` gets a
 warning at load (vague span). Put `@match` on the node you want
 highlighted **and** replaced by `fix:`.
 
-### 4.6 `{{capture}}` interpolation
+### 4.9 `{{capture}}` interpolation
 
 In `message:` and `fix:`, `{{name}}` substitutes the captured node's
 source text. Unknown capture name = hard error at load (fail fast).
@@ -557,3 +665,7 @@ When a diagnostic fires, decide which of these four situations you're in:
   agents; a rule with no description is effectively invisible. One or
   two sentences minimum — what it catches and why it matters. Keep
   rationale in `description`; keep short diagnostic text in `message`.
+- **Don't pick `language: tsx`.** There is no `tsx` variant. Write
+  `language: typescript` for both `.ts` and `.tsx` files. The CLI
+  selects the `typescript` vs `tsx` grammar per file based on the
+  extension.

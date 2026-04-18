@@ -16,7 +16,7 @@ fn fixture_path(name: &str) -> PathBuf {
 }
 
 fn query_rule(language: Language, query_src: &str) -> QueryRule {
-    let ts_language = language.ts_language();
+    let ts_language = language.ts_language(std::path::Path::new("t.rs"));
     let query = Query::new(&ts_language, query_src).expect("query");
     QueryRule::new(query_src, query).unwrap()
 }

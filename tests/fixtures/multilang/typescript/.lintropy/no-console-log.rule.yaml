@@ -1,0 +1,11 @@
+severity: warning
+description: "Flags console.log calls; use a structured logger."
+message: "avoid console.log"
+language: typescript
+query: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @obj
+      property: (property_identifier) @prop)
+    (#eq? @obj "console")
+    (#eq? @prop "log")) @match

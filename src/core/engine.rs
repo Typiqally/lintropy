@@ -1,6 +1,7 @@
 //! Query execution engine.
 
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,6 +15,7 @@ use super::{
     template::{interpolate, CaptureMap},
     Diagnostic, FixHunk, LintropyError, Result,
 };
+use crate::langs::Language;
 
 /// Walk `files`, read each from disk, and lint in parallel.
 ///
@@ -44,7 +46,7 @@ pub fn run(config: &Config, files: &[PathBuf]) -> Result<Vec<Diagnostic>> {
 /// The LSP server builds this on `initialize` and reuses it across
 /// `didChange` notifications; `lintropy check` builds it once per run.
 pub struct PreparedRules<'a> {
-    rust: Vec<ScopedRule<'a>>,
+    by_language: HashMap<Language, Vec<ScopedRule<'a>>>,
 }
 
 struct ScopedRule<'a> {
@@ -57,7 +59,7 @@ struct ScopedRule<'a> {
 impl<'a> PreparedRules<'a> {
     /// Compile every query rule in `config` into a language-indexed table.
     pub fn prepare(config: &'a Config) -> Result<Self> {
-        let mut rust = Vec::new();
+        let mut by_language: HashMap<Language, Vec<ScopedRule<'a>>> = HashMap::new();
         for rule in &config.rules {
             let Some(language) = rule.language else {
                 continue;
@@ -71,11 +73,9 @@ impl<'a> PreparedRules<'a> {
                 include: compile_globs(&rule.include)?,
                 exclude: compile_globs(&rule.exclude)?,
             };
-            if language == crate::langs::Language::Rust {
-                rust.push(scoped);
-            }
+            by_language.entry(language).or_default().push(scoped);
         }
-        Ok(Self { rust })
+        Ok(Self { by_language })
     }
 
     /// Lint an in-memory buffer attributed to `path`.
@@ -84,16 +84,12 @@ impl<'a> PreparedRules<'a> {
     /// detection (via extension) and include/exclude glob matching, and is
     /// propagated into each emitted [`Diagnostic`].
     pub fn lint_buffer(&self, path: &Path, src: &[u8]) -> Result<Vec<Diagnostic>> {
-        let Some(language) = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .and_then(crate::langs::Language::from_extension)
-        else {
+        let Some(language) = crate::langs::language_from_path(path) else {
             return Ok(Vec::new());
         };
 
-        let scoped_rules = match language {
-            crate::langs::Language::Rust => &self.rust,
+        let Some(scoped_rules) = self.by_language.get(&language) else {
+            return Ok(Vec::new());
         };
         if scoped_rules.is_empty() {
             return Ok(Vec::new());
@@ -101,7 +97,7 @@ impl<'a> PreparedRules<'a> {
 
         let mut parser = Parser::new();
         parser
-            .set_language(&language.ts_language())
+            .set_language(&language.ts_language(path))
             .map_err(|err| {
                 LintropyError::Internal(format!(
                     "failed to load parser for {}: {err}",
@@ -119,23 +115,25 @@ impl<'a> PreparedRules<'a> {
                 continue;
             }
             let query_rule = scoped_rule.rule.query_rule().expect("query rule");
+            let compiled = pick_compiled(scoped_rule.rule, path);
             let mut cursor = QueryCursor::new();
-            for query_match in cursor.matches(query_rule.compiled.as_ref(), root, src) {
+            for query_match in cursor.matches(compiled, root, src) {
                 let pattern_predicates = query_rule
                     .predicates_by_pattern
                     .get(query_match.pattern_index)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]);
-                if !pattern_predicates.iter().all(|predicate| {
-                    predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, src)
-                }) {
+                if !pattern_predicates
+                    .iter()
+                    .all(|predicate| predicate.apply(&query_match, compiled, &root, src))
+                {
                     continue;
                 }
                 diagnostics.push(build_diagnostic(
                     path,
                     src,
                     scoped_rule.rule,
-                    query_rule,
+                    compiled,
                     query_match,
                 )?);
             }
@@ -148,6 +146,27 @@ impl<'a> PreparedRules<'a> {
 fn run_file_from_disk(prepared: &PreparedRules<'_>, path: &Path) -> Result<Vec<Diagnostic>> {
     let src = std::fs::read(path)?;
     prepared.lint_buffer(path, &src)
+}
+
+/// Pick the correct precompiled query for `path`.
+///
+/// TypeScript rules are dual-compiled against the `typescript` and `tsx`
+/// grammars (different symbol IDs), so a query compiled against one grammar
+/// won't match a parse tree produced by the other. For `.tsx` paths we return
+/// the tsx-grammar compilation; for everything else (including `.ts`,
+/// `.d.ts`, and all non-TypeScript languages) we return the primary
+/// compilation.
+fn pick_compiled<'a>(rule: &'a RuleConfig, _path: &Path) -> &'a tree_sitter::Query {
+    let query_rule = rule
+        .query_rule()
+        .expect("lint_buffer only processes query rules");
+    #[cfg(feature = "lang-typescript")]
+    if _path.extension().and_then(|e| e.to_str()) == Some("tsx") {
+        if let Some(tsx) = &query_rule.compiled_tsx {
+            return tsx;
+        }
+    }
+    &query_rule.compiled
 }
 
 fn compile_globs(patterns: &[String]) -> Result<Option<Arc<GlobSet>>> {
@@ -198,12 +217,11 @@ fn build_diagnostic(
     path: &Path,
     src: &[u8],
     rule: &RuleConfig,
-    query_rule: &super::config::QueryRule,
+    compiled: &tree_sitter::Query,
     query_match: tree_sitter::QueryMatch<'_, '_>,
 ) -> Result<Diagnostic> {
-    let captures = capture_map(query_match.captures, query_rule.compiled.as_ref(), src)?;
-    let span_node = query_rule
-        .compiled
+    let captures = capture_map(query_match.captures, compiled, src)?;
+    let span_node = compiled
         .capture_index_for_name("match")
         .and_then(|match_capture| {
             query_match

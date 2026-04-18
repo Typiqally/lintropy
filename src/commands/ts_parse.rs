@@ -15,7 +15,7 @@ pub fn run(args: TsParseArgs) -> Result<u8, CliError> {
 
     let mut parser = Parser::new();
     parser
-        .set_language(&language.ts_language())
+        .set_language(&language.ts_language(&args.file))
         .map_err(|err| CliError::internal(format!("set_language: {err}")))?;
     let tree = parser
         .parse(&source, None)
@@ -26,8 +26,12 @@ pub fn run(args: TsParseArgs) -> Result<u8, CliError> {
 
 fn resolve_language(args: &TsParseArgs) -> Result<Language, CliError> {
     if let Some(name) = &args.lang {
-        return Language::from_name(name)
-            .ok_or_else(|| CliError::user(format!("unknown language `{name}`")));
+        return Language::from_name(name).ok_or_else(|| {
+            CliError::user(format!(
+                "unknown language `{name}`. Available: {}",
+                available_langs()
+            ))
+        });
     }
     let ext = args
         .file
@@ -35,13 +39,28 @@ fn resolve_language(args: &TsParseArgs) -> Result<Language, CliError> {
         .and_then(|e| e.to_str())
         .ok_or_else(|| {
             CliError::user(format!(
-                "cannot infer language from extension of {}; pass --lang",
-                args.file.display()
+                "could not detect language for {} (no extension); pass --lang <{}>",
+                args.file.display(),
+                available_langs()
             ))
         })?;
     Language::from_extension(ext).ok_or_else(|| {
         CliError::user(format!(
-            "unknown file extension `.{ext}`; pass --lang to override"
+            "unknown file extension `.{ext}`; pass --lang <{}> to override",
+            available_langs()
         ))
     })
+}
+
+fn available_langs() -> String {
+    let langs: &[&str] = &[
+        "rust",
+        #[cfg(feature = "lang-go")]
+        "go",
+        #[cfg(feature = "lang-python")]
+        "python",
+        #[cfg(feature = "lang-typescript")]
+        "typescript",
+    ];
+    langs.join("|")
 }

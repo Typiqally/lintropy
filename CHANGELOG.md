@@ -44,6 +44,17 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
 - **CI.** fmt + clippy (`-D warnings`) + test matrix
   (`ubuntu-latest` + `macos-latest`) + non-blocking `cargo deny` on stable
   Rust 1.95.
+- **Languages.** First-class Go, Python, and TypeScript support in
+  addition to Rust. Enabled by default via Cargo features `lang-go`,
+  `lang-python`, `lang-typescript`; build a Rust-only binary with
+  `cargo install lintropy --no-default-features`. TypeScript covers
+  `.ts`, `.tsx`, `.mts`, `.cts`, and `.d.ts`; the CLI picks the
+  `typescript` vs `tsx` grammar per file. Rules declare
+  `language: typescript` for both.
+- **`ts-parse` auto-detect.** `lintropy ts-parse <file>` now derives the
+  language from the file extension by default; `--lang <name>` remains
+  as an explicit override. Error messages list every compiled-in
+  language so the user sees exactly what is available.
 - **Language server.** `lintropy lsp` subcommand runs a `tower-lsp`-backed
   Language Server Protocol server over stdio. Publishes diagnostics on
   `didOpen`/`didChange`/`didSave`, applies `TextDocumentSyncKind::INCREMENTAL`
@@ -75,5 +86,17 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   the end-user template; `editors/jetbrains/lsp4ij-template-dev/` ships the
   `$PROJECT_DIR$/target/debug/lintropy` variant for contributors iterating
   on the server.
+
+### Changed
+
+- **Internal API.** `Language::ts_language` now takes a `&Path` argument
+  so TypeScript can dispatch between the `typescript` and `tsx`
+  grammars. Other languages ignore it. Not a published SDK surface.
+
+### Notes
+
+- The default binary grows by roughly 5–7 MB because it bundles the
+  three additional tree-sitter grammars. `--no-default-features`
+  produces a Rust-only build of the same size as before.
 
 [0.1.0]: https://github.com/Typiqally/lintropy/releases/tag/v0.1.0

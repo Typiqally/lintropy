@@ -1,0 +1,11 @@
+severity: warning
+description: "Flags fmt.Println calls; use a structured logger instead."
+message: "avoid fmt.Println"
+language: go
+query: |
+  (call_expression
+    function: (selector_expression
+      operand: (identifier) @pkg
+      field: (field_identifier) @fn)
+    (#eq? @pkg "fmt")
+    (#eq? @fn "Println")) @match

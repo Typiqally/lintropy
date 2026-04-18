@@ -1,0 +1,8 @@
+severity: warning
+description: "Flags bare print() calls; prefer logging."
+message: "avoid print()"
+language: python
+query: |
+  (call
+    function: (identifier) @fn
+    (#eq? @fn "print")) @match

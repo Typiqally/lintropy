@@ -69,6 +69,9 @@ pub enum RuleKind {
 pub struct QueryRule {
     pub source: String,
     pub compiled: Arc<TsQuery>,
+    /// Only `Some` for TypeScript rules. Same `Arc` as `compiled` if the
+    /// query compiles only against one of the two TypeScript grammars.
+    pub compiled_tsx: Option<Arc<TsQuery>>,
     pub predicates_by_pattern: Vec<Vec<CustomPredicate>>,
 }
 
@@ -78,6 +81,7 @@ impl QueryRule {
         Ok(Self {
             source: source.into(),
             compiled: Arc::new(query),
+            compiled_tsx: None,
             predicates_by_pattern,
         })
     }
@@ -399,13 +403,7 @@ fn build_query_kind(
         ))
     })?;
     let query_source = raw.query.clone().expect("caller guarantees query rule");
-    let compiled = TsQuery::new(&language.ts_language(), &query_source).map_err(|e| {
-        LintropyError::QueryCompile {
-            rule_id: id.to_string(),
-            source_path: source_path.to_path_buf(),
-            message: format!("{e}"),
-        }
-    })?;
+    let (compiled, compiled_tsx) = compile_query_for(language, id, source_path, &query_source)?;
 
     let predicates_by_pattern = predicates::parse_general_predicates_by_pattern(&compiled)
         .map_err(|e| contextualize_predicate_err(e, id, source_path))?;
@@ -430,9 +428,57 @@ fn build_query_kind(
 
     Ok(RuleKind::Query(QueryRule {
         source: query_source,
-        compiled: Arc::new(compiled),
+        compiled,
+        compiled_tsx,
         predicates_by_pattern,
     }))
+}
+
+fn compile_query_for(
+    language: crate::langs::Language,
+    id: &str,
+    source_path: &std::path::Path,
+    query_source: &str,
+) -> Result<(Arc<TsQuery>, Option<Arc<TsQuery>>)> {
+    #[cfg(feature = "lang-typescript")]
+    if language == crate::langs::Language::TypeScript {
+        use std::path::Path;
+        let ts_grammar = language.ts_language(Path::new("_.ts"));
+        let tsx_grammar = language.ts_language(Path::new("_.tsx"));
+
+        let ts_result = TsQuery::new(&ts_grammar, query_source);
+        let tsx_result = TsQuery::new(&tsx_grammar, query_source);
+
+        match (ts_result, tsx_result) {
+            (Ok(ts), Ok(tsx)) => {
+                return Ok((Arc::new(ts), Some(Arc::new(tsx))));
+            }
+            (Ok(ts), Err(_)) => {
+                let ts_arc = Arc::new(ts);
+                return Ok((ts_arc.clone(), Some(ts_arc)));
+            }
+            (Err(_), Ok(tsx)) => {
+                let tsx_arc = Arc::new(tsx);
+                return Ok((tsx_arc.clone(), Some(tsx_arc)));
+            }
+            (Err(ts_err), Err(tsx_err)) => {
+                return Err(LintropyError::QueryCompile {
+                    rule_id: id.to_string(),
+                    source_path: source_path.to_path_buf(),
+                    message: format!("typescript grammar: {ts_err}; tsx grammar: {tsx_err}"),
+                });
+            }
+        }
+    }
+
+    let compiled = TsQuery::new(&language.ts_language(source_path), query_source).map_err(|e| {
+        LintropyError::QueryCompile {
+            rule_id: id.to_string(),
+            source_path: source_path.to_path_buf(),
+            message: format!("{e}"),
+        }
+    })?;
+    Ok((Arc::new(compiled), None))
 }
 
 fn validate_template(
@@ -684,5 +730,84 @@ query: |
             schema_str.contains("\"description\""),
             "expected `description` property in JSON schema, got: {schema_str}"
         );
+    }
+
+    #[cfg(feature = "lang-typescript")]
+    #[test]
+    fn typescript_rule_compiles_against_both_grammars() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"severity: warning
+message: "avoid any"
+language: typescript
+query: |
+  (predefined_type) @t (#eq? @t "any")
+"#;
+        write_fixture(tmp.path(), "version: 1\n", Some(("no-any.rule.yaml", rule)));
+        let cfg = Config::load_from_root(tmp.path()).unwrap();
+        let rule = &cfg.rules[0];
+        let query = rule.query_rule().expect("is a query rule");
+        assert!(
+            query.compiled_tsx.is_some(),
+            "typescript rule should have a tsx-grammar compilation"
+        );
+    }
+
+    #[cfg(feature = "lang-typescript")]
+    #[test]
+    fn typescript_rule_with_jsx_only_compiles_against_tsx() {
+        // Set up: rule whose query uses `jsx_element`, which does not exist
+        // in the plain typescript grammar. Expectation: the loader keeps
+        // the tsx-only compilation. Both `compiled` and `compiled_tsx`
+        // point at the tsx-compiled query (same Arc).
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"severity: warning
+message: "no raw div"
+language: typescript
+query: |
+  (jsx_element) @m
+"#;
+        write_fixture(tmp.path(), "version: 1\n", Some(("no-div.rule.yaml", rule)));
+        let cfg = Config::load_from_root(tmp.path()).unwrap();
+        let rule = &cfg.rules[0];
+        let query = rule.query_rule().expect("is a query rule");
+        assert!(query.compiled_tsx.is_some());
+        assert!(std::sync::Arc::ptr_eq(
+            &query.compiled,
+            query.compiled_tsx.as_ref().unwrap()
+        ));
+    }
+
+    #[cfg(feature = "lang-typescript")]
+    #[test]
+    fn typescript_rule_that_fails_both_grammars_errors() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"severity: warning
+message: "broken"
+language: typescript
+query: |
+  (this_node_kind_does_not_exist) @m
+"#;
+        write_fixture(tmp.path(), "version: 1\n", Some(("broken.rule.yaml", rule)));
+        let err = Config::load_from_root(tmp.path()).unwrap_err();
+        assert!(
+            format!("{err}").contains("broken"),
+            "error surfaces rule id, got: {err}"
+        );
+    }
+
+    #[test]
+    fn non_typescript_rules_have_no_tsx_compilation() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule = r#"severity: warning
+message: "m"
+language: rust
+query: |
+  (identifier) @m
+"#;
+        write_fixture(tmp.path(), "version: 1\n", Some(("r.rule.yaml", rule)));
+        let cfg = Config::load_from_root(tmp.path()).unwrap();
+        let rule = &cfg.rules[0];
+        let query = rule.query_rule().expect("is a query rule");
+        assert!(query.compiled_tsx.is_none());
     }
 }
