@@ -9,6 +9,5 @@ authors.workspace = true
 description = "Language registry for lintropy. Isolates heavy tree-sitter grammar deps."
 
 [dependencies]
-lintropy-core = { path = "../lintropy-core" }
 tree-sitter = { workspace = true }
 tree-sitter-rust = { workspace = true }
