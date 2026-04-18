@@ -10,3 +10,10 @@ description = "Reporter trait and (eventually) text + JSON reporters."
 
 [dependencies]
 lintropy-core = { path = "../lintropy-core" }
+owo-colors = { version = "4", features = ["supports-colors"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tempfile = "3"
+
+[dev-dependencies]
+insta = { version = "1", features = ["json"] }
