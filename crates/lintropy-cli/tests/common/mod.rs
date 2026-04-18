@@ -2,6 +2,8 @@
 
 #![allow(dead_code)]
 
+pub mod describe;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
