@@ -37,13 +37,13 @@ pub enum Command {
     /// Parse a source file with tree-sitter and print the S-expression.
     #[command(name = "ts-parse")]
     TsParse(TsParseArgs),
-    /// Install the embedded `query` syntax extension into VS Code / Cursor.
-    #[command(name = "install-query-extension")]
-    InstallQueryExtension(InstallQueryExtensionArgs),
+    /// Install everything lintropy ships for an editor (one command).
+    #[command(name = "install-editor")]
+    InstallEditor(InstallEditorArgs),
     /// Unpack the embedded TextMate bundle (JetBrains `query` highlighting).
     #[command(name = "install-textmate-bundle")]
     InstallTextmateBundle(InstallTextmateBundleArgs),
-    /// Install the lintropy LSP client extension into VS Code / Cursor.
+    /// Install the lintropy extension (grammar + LSP client) into VS Code / Cursor.
     #[command(name = "install-lsp-extension")]
     InstallLspExtension(InstallLspExtensionArgs),
     /// Unpack the embedded LSP4IJ template (JetBrains LSP client).
@@ -253,34 +253,6 @@ pub struct TsParseArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub enum QueryEditor {
-    /// Install into VS Code via the `code` CLI.
-    Vscode,
-    /// Install into Cursor via the `cursor` CLI.
-    Cursor,
-}
-
-#[derive(Debug, Args)]
-pub struct InstallQueryExtensionArgs {
-    /// Target editor. Required unless `--package-only` is set.
-    #[arg(value_enum)]
-    pub editor: Option<QueryEditor>,
-
-    /// Install into a named editor profile.
-    #[arg(long, value_name = "NAME")]
-    pub profile: Option<String>,
-
-    /// Write the embedded `.vsix` to disk instead of invoking the editor.
-    #[arg(long = "package-only")]
-    pub package_only: bool,
-
-    /// Output path for `--package-only`. Defaults to
-    /// `./lintropy-query-syntax.vsix`.
-    #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
-    pub output: Option<PathBuf>,
-}
-
 #[derive(Debug, Args)]
 pub struct InstallTextmateBundleArgs {
     /// Parent directory to unpack the bundle into. Defaults to the
@@ -347,6 +319,46 @@ pub struct InstallLspTemplateArgs {
     pub dir: Option<PathBuf>,
 
     /// Overwrite an existing template dir in place.
+    #[arg(long)]
+    pub force: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum EditorFamily {
+    /// VS Code — installs the extension (grammar + LSP client).
+    Vscode,
+    /// Cursor — installs the same extension as VS Code.
+    Cursor,
+    /// JetBrains IDEs — unpacks the TextMate bundle + LSP4IJ template.
+    Jetbrains,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallEditorArgs {
+    /// Target editor family.
+    #[arg(value_enum)]
+    pub editor: EditorFamily,
+
+    /// For JetBrains, parent directory where the bundle + template get
+    /// unpacked. Ignored for VS Code / Cursor (the editor CLI owns the
+    /// install location). Defaults to the current working directory.
+    #[arg(long, value_name = "PATH")]
+    pub dir: Option<PathBuf>,
+
+    /// Install into a named VS Code / Cursor profile.
+    #[arg(long, value_name = "NAME")]
+    pub profile: Option<String>,
+
+    /// Pin the VS Code `.vsix` to a specific version. Defaults to the
+    /// CLI's own version.
+    #[arg(long, value_name = "VERSION")]
+    pub version: Option<String>,
+
+    /// Source a pre-downloaded `.vsix` instead of hitting GitHub Releases.
+    #[arg(long, value_name = "PATH")]
+    pub vsix: Option<PathBuf>,
+
+    /// Overwrite existing JetBrains bundle / template dirs in place.
     #[arg(long)]
     pub force: bool,
 }

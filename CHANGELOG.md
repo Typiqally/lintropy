@@ -86,6 +86,19 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   the end-user template; `editors/jetbrains/lsp4ij-template-dev/` ships the
   `$PROJECT_DIR$/target/debug/lintropy` variant for contributors iterating
   on the server.
+- **Unified editor install.** `lintropy install-editor vscode|cursor|jetbrains`
+  replaces the previous multi-command dance: one call installs everything
+  that makes sense for that editor. The separate `lintropy-query-syntax`
+  extension is merged into the main `lintropy` VS Code / Cursor extension
+  (one `.vsix` contributes both the LSP client and the `query: |` grammar
+  injection). `install-query-extension` is removed; use
+  `install-editor vscode` or `install-lsp-extension vscode`. For JetBrains,
+  `install-editor jetbrains` unpacks both the TextMate bundle (query DSL
+  highlighting) and the LSP4IJ template (live diagnostics) into `--dir`.
+- **build.rs removed.** The previous build script existed only to pack the
+  syntax-only `.vsix`; now that the merged extension is built via
+  `vsce package` and released as a GitHub asset, the build-time zip is
+  unnecessary (and the `zip` + build-dep `serde_json` drop off).
 
 ### Changed
 
