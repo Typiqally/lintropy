@@ -8,4 +8,4 @@
 //! whether to upgrade an existing file in place.
 
 pub const EMBEDDED_SKILL: &str = include_str!("../skill/SKILL.md");
-pub const SKILL_VERSION: &str = "0.2.0";
+pub const SKILL_VERSION: &str = "0.3.0";
