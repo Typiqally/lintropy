@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="lintropy-root">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="lintropy-root" />
+              <option name="relativePathToSchema" value="editors/schemas/lintropy.schema.json" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="lintropy.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="lintropy-rule">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="lintropy-rule" />
+              <option name="relativePathToSchema" value="editors/schemas/lintropy-rule.schema.json" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".lintropy/**/*.rule.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="lintropy-rules">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="lintropy-rules" />
+              <option name="relativePathToSchema" value="editors/schemas/lintropy-rules.schema.json" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".lintropy/**/*.rules.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

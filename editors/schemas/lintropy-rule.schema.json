@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "Severity": {
+      "description": "Severity of a diagnostic, mirrored from §4.5 of the spec.",
+      "oneOf": [
+        {
+          "description": "Hardest level; by default causes a non-zero exit.",
+          "enum": [
+            "info"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Softer advisory diagnostic.",
+          "enum": [
+            "warning"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Build-breaking diagnostic.",
+          "enum": [
+            "error"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "docs_url": {
+      "default": null,
+      "description": "Optional URL with docs or remediation guidance for the rule.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "exclude": {
+      "default": [],
+      "description": "Exclusive gitignore-style globs removing files from the rule scope.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "fix": {
+      "default": null,
+      "description": "Replacement text applied to the `@match` span for query-rule autofix.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "forbid": {
+      "default": null,
+      "description": "Regex that raises a diagnostic for each match. Phase 2 runtime support.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "id": {
+      "default": null,
+      "description": "Stable identifier for the rule. Optional in `*.rule.yaml`, required elsewhere.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "include": {
+      "default": [],
+      "description": "Inclusive gitignore-style globs restricting where the rule applies.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "language": {
+      "default": null,
+      "description": "Tree-sitter language used to compile a `query` rule.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "message": {
+      "description": "User-facing diagnostic text, with `{{capture}}` interpolation for query rules.",
+      "type": "string"
+    },
+    "multiline": {
+      "default": null,
+      "description": "Enables multiline / dotall regex behavior for match rules.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "query": {
+      "default": null,
+      "description": "Tree-sitter query source for structural matching.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "require": {
+      "default": null,
+      "description": "Regex that raises a diagnostic when absent from a file. Phase 2 runtime support.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Severity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Diagnostic severity emitted when the rule matches."
+    },
+    "tags": {
+      "default": [],
+      "description": "Free-form labels for grouping and filtering.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "message"
+  ],
+  "title": "RawRule",
+  "type": "object"
+}

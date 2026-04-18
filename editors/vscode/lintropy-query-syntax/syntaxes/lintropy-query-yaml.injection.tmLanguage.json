@@ -1,0 +1,41 @@
+{
+  "name": "Lintropy Query YAML Injection",
+  "scopeName": "source.yaml.lintropy-query.injection",
+  "injectionSelector": "L:source.yaml",
+  "patterns": [
+    {
+      "include": "#query-block"
+    }
+  ],
+  "repository": {
+    "query-block": {
+      "patterns": [
+        {
+          "name": "meta.property.lintropy-query.yaml",
+          "begin": "^(\\s*)(query)(\\s*:\\s*)([|>])([+-]?[0-9]*)\\s*$",
+          "beginCaptures": {
+            "2": {
+              "name": "entity.name.tag.yaml"
+            },
+            "3": {
+              "name": "punctuation.separator.key-value.mapping.yaml"
+            },
+            "4": {
+              "name": "storage.modifier.block-scalar.yaml"
+            },
+            "5": {
+              "name": "constant.numeric.indent-indicator.yaml"
+            }
+          },
+          "end": "^(?!\\1[ \\t]+|[ \\t]*$)",
+          "contentName": "meta.embedded.block.lintropy-query",
+          "patterns": [
+            {
+              "include": "source.lintropy-query"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

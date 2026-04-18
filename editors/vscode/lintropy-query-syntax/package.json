@@ -1,0 +1,65 @@
+{
+  "name": "lintropy-query-syntax",
+  "displayName": "Lintropy Query Syntax",
+  "description": "TextMate syntax highlighting for tree-sitter query blocks embedded in lintropy YAML files.",
+  "version": "0.0.1",
+  "publisher": "lintropy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/lintropy"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "files": [
+    "language-configuration.json",
+    "LICENSE.txt",
+    "package.json",
+    "syntaxes/**"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "lintropy",
+    "tree-sitter",
+    "query",
+    "textmate",
+    "yaml"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lintropy-query",
+        "aliases": [
+          "Lintropy Query"
+        ],
+        "extensions": [
+          ".lintropy-query"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lintropy-query",
+        "scopeName": "source.lintropy-query",
+        "path": "./syntaxes/lintropy-query.tmLanguage.json"
+      },
+      {
+        "scopeName": "source.yaml.lintropy-query.injection",
+        "path": "./syntaxes/lintropy-query-yaml.injection.tmLanguage.json",
+        "injectTo": [
+          "source.yaml"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.lintropy-query": "lintropy-query"
+        },
+        "tokenTypes": {
+          "meta.embedded.block.lintropy-query": "other"
+        }
+      }
+    ]
+  }
+}

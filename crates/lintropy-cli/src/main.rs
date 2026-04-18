@@ -37,7 +37,7 @@ fn dispatch(cli: Cli) -> Result<u8, CliError> {
         Some(Command::Explain(args)) => commands::explain::run(args),
         Some(Command::Rules(args)) => commands::rules::run(args),
         Some(Command::Init(args)) => commands::init::run(args),
-        Some(Command::Schema) => commands::schema::run(),
+        Some(Command::Schema(args)) => commands::schema::run(args),
         Some(Command::Config(args)) => commands::validate::run(args),
         Some(Command::TsParse(args)) => commands::ts_parse::run(args),
         None => commands::check::run(cli::CheckArgs::default()),

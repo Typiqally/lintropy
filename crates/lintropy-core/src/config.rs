@@ -108,9 +108,12 @@ impl RuleConfig {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRoot {
+    /// Schema version for the root `lintropy.yaml` file.
     version: u32,
+    /// Global defaults and exit-code policy.
     #[serde(default)]
     settings: Option<RawSettings>,
+    /// Inline rules authored directly in `lintropy.yaml`.
     #[serde(default)]
     rules: Option<Vec<RawRule>>,
 }
@@ -118,8 +121,10 @@ struct RawRoot {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawSettings {
+    /// Highest severity that should cause a non-zero exit code.
     #[serde(default)]
     fail_on: Option<Severity>,
+    /// Severity applied when a rule omits `severity`.
     #[serde(default)]
     default_severity: Option<Severity>,
 }
@@ -127,30 +132,43 @@ struct RawSettings {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRule {
+    /// Stable identifier for the rule. Optional in `*.rule.yaml`, required elsewhere.
     #[serde(default)]
     id: Option<String>,
+    /// Diagnostic severity emitted when the rule matches.
     #[serde(default)]
     severity: Option<Severity>,
+    /// User-facing diagnostic text, with `{{capture}}` interpolation for query rules.
     message: String,
+    /// Inclusive gitignore-style globs restricting where the rule applies.
     #[serde(default)]
     include: Vec<String>,
+    /// Exclusive gitignore-style globs removing files from the rule scope.
     #[serde(default)]
     exclude: Vec<String>,
+    /// Free-form labels for grouping and filtering.
     #[serde(default)]
     tags: Vec<String>,
+    /// Optional URL with docs or remediation guidance for the rule.
     #[serde(default)]
     docs_url: Option<String>,
+    /// Tree-sitter language used to compile a `query` rule.
     #[serde(default)]
     language: Option<String>,
+    /// Tree-sitter query source for structural matching.
     #[serde(default)]
     query: Option<String>,
+    /// Regex that raises a diagnostic for each match. Phase 2 runtime support.
     #[serde(default)]
     forbid: Option<String>,
+    /// Regex that raises a diagnostic when absent from a file. Phase 2 runtime support.
     #[serde(default)]
     require: Option<String>,
+    /// Enables multiline / dotall regex behavior for match rules.
     #[serde(default)]
     #[allow(dead_code)]
     multiline: Option<bool>,
+    /// Replacement text applied to the `@match` span for query-rule autofix.
     #[serde(default)]
     fix: Option<String>,
 }
@@ -158,6 +176,7 @@ struct RawRule {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRulesFile {
+    /// Rule list contained in a grouped `.rules.yaml` file.
     rules: Vec<RawRule>,
 }
 
@@ -190,8 +209,22 @@ impl Config {
     }
 
     pub fn json_schema() -> serde_json::Value {
+        Self::root_json_schema()
+    }
+
+    pub fn root_json_schema() -> serde_json::Value {
         let schema = schemars::schema_for!(RawRoot);
         serde_json::to_value(&schema).expect("schemars root schema is JSON-serializable")
+    }
+
+    pub fn rule_json_schema() -> serde_json::Value {
+        let schema = schemars::schema_for!(RawRule);
+        serde_json::to_value(&schema).expect("schemars rule schema is JSON-serializable")
+    }
+
+    pub fn rules_file_json_schema() -> serde_json::Value {
+        let schema = schemars::schema_for!(RawRulesFile);
+        serde_json::to_value(&schema).expect("schemars rules-file schema is JSON-serializable")
     }
 
     fn from_discovered(disc: Discovered) -> Result<Config> {
@@ -523,6 +556,22 @@ mod tests {
     #[test]
     fn json_schema_covers_root_shape() {
         let schema = Config::json_schema();
+        let object = schema.as_object().expect("schema is an object");
+        assert!(object.contains_key("$schema"));
+        assert!(object.contains_key("properties"));
+    }
+
+    #[test]
+    fn rule_json_schema_covers_rule_shape() {
+        let schema = Config::rule_json_schema();
+        let object = schema.as_object().expect("schema is an object");
+        assert!(object.contains_key("$schema"));
+        assert!(object.contains_key("properties"));
+    }
+
+    #[test]
+    fn rules_file_json_schema_covers_rules_shape() {
+        let schema = Config::rules_file_json_schema();
         let object = schema.as_object().expect("schema is an object");
         assert!(object.contains_key("$schema"));
         assert!(object.contains_key("properties"));

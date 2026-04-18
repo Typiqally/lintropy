@@ -146,6 +146,62 @@ write and respect the repo’s guardrails.
 - rule-source-aware reporting
 - agent-oriented hooks and schema output
 
+## Editor Support
+
+This repo now checks in JSON Schemas for all lintropy YAML surfaces:
+
+- `editors/schemas/lintropy.schema.json` for repo-root `lintropy.yaml`
+- `editors/schemas/lintropy-rule.schema.json` for `.lintropy/**/*.rule.yaml`
+- `editors/schemas/lintropy-rules.schema.json` for `.lintropy/**/*.rules.yaml`
+
+Refresh them after schema changes with:
+
+```console
+./scripts/export-editor-schemas.sh
+```
+
+### VS Code / Cursor
+
+Workspace settings in `.vscode/settings.json` associate those schemas with the
+matching files, and `.vscode/extensions.json` recommends `redhat.vscode-yaml`.
+Cursor uses the same workspace settings, so completions, hover docs, and
+validation work there as well.
+
+For `query: |` blocks, the repo also ships a local TextMate-powered extension
+at `editors/vscode/lintropy-query-syntax/`. It injects `source.lintropy-query`
+highlighting into YAML block scalars whose key is `query`.
+
+Install it in VS Code or Cursor from the folder, or package it first:
+
+```console
+cd editors/vscode/lintropy-query-syntax
+npx @vscode/vsce package
+```
+
+Then install the resulting `.vsix` in VS Code / Cursor. The YAML schemas and
+the injected TextMate grammar work together: schema-backed validation for the
+file shape, TextMate syntax highlighting for the embedded S-expression.
+
+### JetBrains IDEs
+
+Shared mappings live in `.idea/jsonSchemas.xml`, pointing JetBrains IDEs at the
+same checked-in schema files for:
+
+- `lintropy.yaml`
+- `.lintropy/**/*.rule.yaml`
+- `.lintropy/**/*.rules.yaml`
+
+If your IDE ignores shared `.idea` files, add the same three mappings manually
+under `Languages & Frameworks | Schemas and DTDs | JSON Schema Mappings`.
+
+For embedded query highlighting, import the TextMate bundle from:
+
+- `editors/textmate/Lintropy Query.tmbundle`
+
+In JetBrains IDEs this is under `Editor | TextMate Bundles`. The bundle adds a
+TextMate injection that highlights YAML `query: |` blocks using the same
+`source.lintropy-query` grammar as the VS Code / Cursor extension.
+
 ## License
 
 MIT

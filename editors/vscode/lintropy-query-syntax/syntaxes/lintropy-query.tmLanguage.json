@@ -1,0 +1,129 @@
+{
+  "name": "Lintropy Query",
+  "scopeName": "source.lintropy-query",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#capture"
+    },
+    {
+      "include": "#predicate"
+    },
+    {
+      "include": "#variable"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "name": "comment.line.semicolon.lintropy-query",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.lintropy-query",
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.lintropy-query"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.lintropy-query"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.lintropy-query",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "capture": {
+      "patterns": [
+        {
+          "name": "variable.other.capture.lintropy-query",
+          "match": "@[A-Za-z_][A-Za-z0-9_\\-]*"
+        }
+      ]
+    },
+    "predicate": {
+      "patterns": [
+        {
+          "name": "entity.name.function.predicate.lintropy-query",
+          "match": "#[A-Za-z_][A-Za-z0-9_?!\\-]*"
+        }
+      ]
+    },
+    "variable": {
+      "patterns": [
+        {
+          "name": "variable.language.wildcard.lintropy-query",
+          "match": "\\b_\\b"
+        }
+      ]
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "entity.name.type.node.lintropy-query",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_\\-]*\\b"
+        }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.lintropy-query",
+          "match": "-?\\b\\d+\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.section.group.begin.lintropy-query",
+          "match": "\\("
+        },
+        {
+          "name": "punctuation.section.group.end.lintropy-query",
+          "match": "\\)"
+        },
+        {
+          "name": "punctuation.section.brackets.begin.lintropy-query",
+          "match": "\\["
+        },
+        {
+          "name": "punctuation.section.brackets.end.lintropy-query",
+          "match": "\\]"
+        },
+        {
+          "name": "punctuation.separator.key-value.lintropy-query",
+          "match": ":"
+        }
+      ]
+    }
+  }
+}
