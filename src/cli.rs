@@ -43,6 +43,8 @@ pub enum Command {
     /// Unpack the embedded TextMate bundle (JetBrains `query` highlighting).
     #[command(name = "install-textmate-bundle")]
     InstallTextmateBundle(InstallTextmateBundleArgs),
+    /// Run the Language Server Protocol backend over stdio.
+    Lsp,
 }
 
 #[derive(Debug, Subcommand)]

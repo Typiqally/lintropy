@@ -39,6 +39,7 @@ fn dispatch(cli: Cli) -> Result<u8, CliError> {
         Some(Command::TsParse(args)) => commands::ts_parse::run(args),
         Some(Command::InstallQueryExtension(args)) => commands::install_query_extension::run(args),
         Some(Command::InstallTextmateBundle(args)) => commands::install_textmate_bundle::run(args),
+        Some(Command::Lsp) => lintropy::lsp::run(),
         None => commands::check::run(cli::CheckArgs::default()),
     }
 }
