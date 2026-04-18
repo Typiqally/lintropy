@@ -207,27 +207,25 @@ matching files, and `.vscode/extensions.json` recommends `redhat.vscode-yaml`.
 Cursor uses the same workspace settings, so completions, hover docs, and
 validation work there as well.
 
-For `query: |` blocks, the repo also ships a local TextMate-powered extension
-at `editors/vscode/lintropy-query-syntax/`. It injects `source.lintropy-query`
-highlighting into YAML block scalars whose key is `query`.
-
-Install it with the convenience script:
+For `query: |` blocks, the CLI ships an embedded TextMate-powered extension
+that injects `source.lintropy-query` highlighting into YAML block scalars
+whose key is `query`. Install it directly:
 
 ```console
-./scripts/install-query-extension.sh vscode
-./scripts/install-query-extension.sh cursor
+lintropy install-query-extension vscode
+lintropy install-query-extension cursor
 ```
 
 Optional profile selection:
 
 ```console
-./scripts/install-query-extension.sh cursor --profile "Default"
+lintropy install-query-extension cursor --profile "Default"
 ```
 
-If you only want the packaged artifact without installing it:
+Write the `.vsix` to disk without invoking the editor:
 
 ```console
-./scripts/install-query-extension.sh vscode --package-only
+lintropy install-query-extension --package-only -o ./lintropy-query-syntax.vsix
 ```
 
 The YAML schemas and the injected TextMate grammar work together: schema-backed
@@ -246,12 +244,16 @@ same checked-in schema files for:
 If your IDE ignores shared `.idea` files, add the same three mappings manually
 under `Languages & Frameworks | Schemas and DTDs | JSON Schema Mappings`.
 
-For embedded query highlighting, import the TextMate bundle from:
+For embedded query highlighting, unpack the TextMate bundle that ships inside
+the CLI and point JetBrains at it:
 
-- `editors/textmate/Lintropy Query.tmbundle`
+```console
+lintropy install-textmate-bundle --dir ~/.lintropy
+```
 
-In JetBrains IDEs this is under `Editor | TextMate Bundles`. The bundle adds a
-TextMate injection that highlights YAML `query: |` blocks using the same
+Then in JetBrains IDEs: `Settings → Editor → TextMate Bundles → +` and select
+the extracted `Lintropy Query.tmbundle` directory. The bundle adds a TextMate
+injection that highlights YAML `query: |` blocks using the same
 `source.lintropy-query` grammar as the VS Code / Cursor extension.
 
 ## Status

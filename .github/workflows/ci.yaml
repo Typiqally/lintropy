@@ -72,5 +72,5 @@ jobs:
         with:
           shared-key: ubuntu-1.95.0
       - name: Install cargo-deny
-        run: cargo install cargo-deny --locked --version 0.16.4
+        run: cargo install cargo-deny --locked --version 0.19.4
       - run: cargo deny check

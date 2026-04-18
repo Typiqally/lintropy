@@ -37,6 +37,12 @@ pub enum Command {
     /// Parse a source file with tree-sitter and print the S-expression.
     #[command(name = "ts-parse")]
     TsParse(TsParseArgs),
+    /// Install the embedded `query` syntax extension into VS Code / Cursor.
+    #[command(name = "install-query-extension")]
+    InstallQueryExtension(InstallQueryExtensionArgs),
+    /// Unpack the embedded TextMate bundle (JetBrains `query` highlighting).
+    #[command(name = "install-textmate-bundle")]
+    InstallTextmateBundle(InstallTextmateBundleArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -237,4 +243,44 @@ pub struct TsParseArgs {
     /// Override the language derived from the extension.
     #[arg(long, value_name = "NAME")]
     pub lang: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum QueryEditor {
+    /// Install into VS Code via the `code` CLI.
+    Vscode,
+    /// Install into Cursor via the `cursor` CLI.
+    Cursor,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallQueryExtensionArgs {
+    /// Target editor. Required unless `--package-only` is set.
+    #[arg(value_enum)]
+    pub editor: Option<QueryEditor>,
+
+    /// Install into a named editor profile.
+    #[arg(long, value_name = "NAME")]
+    pub profile: Option<String>,
+
+    /// Write the embedded `.vsix` to disk instead of invoking the editor.
+    #[arg(long = "package-only")]
+    pub package_only: bool,
+
+    /// Output path for `--package-only`. Defaults to
+    /// `./lintropy-query-syntax.vsix`.
+    #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
+    pub output: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallTextmateBundleArgs {
+    /// Parent directory to unpack the bundle into. Defaults to the
+    /// current working directory; the bundle dir is created beneath it.
+    #[arg(long, value_name = "PATH")]
+    pub dir: Option<PathBuf>,
+
+    /// Overwrite an existing bundle dir in place.
+    #[arg(long)]
+    pub force: bool,
 }

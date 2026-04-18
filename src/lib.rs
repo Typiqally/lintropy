@@ -17,6 +17,8 @@ pub mod cli;
 #[doc(hidden)]
 pub mod commands;
 #[doc(hidden)]
+pub mod editor_assets;
+#[doc(hidden)]
 pub mod exit;
 #[doc(hidden)]
 pub mod skill;

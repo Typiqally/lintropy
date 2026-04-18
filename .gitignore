@@ -6,16 +6,14 @@
 .worktrees/
 
 # JetBrains / IntelliJ
-.idea/
-!.idea/
+.idea/*
 !.idea/jsonSchemas.xml
 *.iml
 *.ipr
 *.iws
 
 # VS Code
-.vscode/
-!.vscode/
+.vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 

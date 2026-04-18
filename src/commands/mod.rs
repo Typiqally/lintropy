@@ -5,6 +5,8 @@ pub mod check;
 pub mod explain;
 pub mod hook;
 pub mod init;
+pub mod install_query_extension;
+pub mod install_textmate_bundle;
 pub mod rules;
 pub mod schema;
 pub mod ts_parse;
