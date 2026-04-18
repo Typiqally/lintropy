@@ -73,4 +73,8 @@ pub enum LintropyError {
     /// Unexpected internal invariant violation.
     #[error("internal error: {0}")]
     Internal(String),
+
+    /// Rule uses a feature lintropy has not shipped yet (e.g. match rules in Phase 1).
+    #[error("unsupported feature: {0}")]
+    Unsupported(String),
 }

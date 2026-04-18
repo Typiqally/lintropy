@@ -9,7 +9,17 @@ authors.workspace = true
 description = "Shared types, errors, and traits for lintropy."
 
 [dependencies]
+lintropy-langs = { path = "../lintropy-langs" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 schemars = { workspace = true }
 thiserror = { workspace = true }
+tree-sitter = { workspace = true }
+ignore = { workspace = true }
+globset = { workspace = true }
+similar = { workspace = true }
+tempfile = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
