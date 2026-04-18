@@ -1,0 +1,38 @@
+# lintropy.toml
+# Starter config intended to stay easy to edit by humans and coding agents.
+
+[project]
+name = "my-codebase"
+root = "."
+
+[discovery]
+include = ["src/**/*.rs", "crates/**/*.rs"]
+exclude = ["target/**", "dist/**", "node_modules/**"]
+
+[output]
+format = "text"
+show_summary = true
+fail_on = "error"
+
+[[tools]]
+name = "rustfmt"
+command = "cargo fmt --check"
+enabled = true
+files = ["**/*.rs"]
+
+[[tools]]
+name = "clippy"
+command = "cargo clippy --all-targets --all-features -- -D warnings"
+enabled = true
+files = ["**/*.rs"]
+
+[[rules]]
+id = "ban-todo"
+enabled = true
+severity = "warning"
+message = "Remove TODO markers before merging"
+include = ["**/*.rs", "**/*.md"]
+exclude = ["CHANGELOG.md"]
+
+[rules.settings]
+needle = "TODO"
