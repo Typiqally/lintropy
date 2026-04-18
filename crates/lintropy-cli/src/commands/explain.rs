@@ -47,6 +47,14 @@ fn print_rule(rule: &RuleConfig) {
         println!("  {line}");
     }
 
+    if let Some(desc) = &rule.description {
+        println!();
+        println!("description:");
+        for line in wrap_for_terminal(desc) {
+            println!("  {line}");
+        }
+    }
+
     match &rule.kind {
         RuleKind::Query(q) => {
             println!();
@@ -76,4 +84,31 @@ fn print_rule(rule: &RuleConfig) {
             println!("  {line}");
         }
     }
+}
+
+fn wrap_for_terminal(text: &str) -> Vec<String> {
+    const WRAP_WIDTH: usize = 100;
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if line.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        let mut current = String::new();
+        for word in line.split_whitespace() {
+            if current.is_empty() {
+                current.push_str(word);
+            } else if current.len() + 1 + word.len() <= WRAP_WIDTH {
+                current.push(' ');
+                current.push_str(word);
+            } else {
+                out.push(std::mem::take(&mut current));
+                current.push_str(word);
+            }
+        }
+        if !current.is_empty() {
+            out.push(current);
+        }
+    }
+    out
 }
