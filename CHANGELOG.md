@@ -40,7 +40,7 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
 - **Example repo.** `examples/rust-demo/` with four canonical diagnostics
   across three files, used as the integration-test fixture.
 - **Integration tests.** `tests/integration_{check,fix,hook,init}.rs` at
-  the workspace root exercise the full pipeline end-to-end.
+  the crate root exercise the full pipeline end-to-end.
 - **CI.** fmt + clippy (`-D warnings`) + test matrix
   (`ubuntu-latest` + `macos-latest`) + non-blocking `cargo deny` on stable
   Rust 1.95.

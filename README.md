@@ -42,7 +42,7 @@ brew install lintropy
 Stable Rust 1.95 or newer required.
 
 ```console
-cargo install --path crates/lintropy-cli
+cargo install --path .
 ```
 
 Not yet on crates.io.
@@ -183,7 +183,7 @@ lintropy init --with-skill      # also installs SKILL.md + wires the Claude Code
 ```
 
 The canonical `SKILL.md` at
-[`crates/lintropy-cli/skill/SKILL.md`](crates/lintropy-cli/skill/SKILL.md)
+[`skill/SKILL.md`](skill/SKILL.md)
 is what `init --with-skill` installs into agent skill directories.
 
 ## Editor support

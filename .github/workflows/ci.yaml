@@ -39,8 +39,8 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ubuntu-1.95.0-workspace
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+          shared-key: ubuntu-1.95.0
+      - run: cargo clippy --all-targets --locked -- -D warnings
 
   test:
     name: test (${{ matrix.os }})
@@ -56,8 +56,8 @@ jobs:
           toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ matrix.os }}-1.95.0-workspace
-      - run: cargo test --workspace --locked --quiet
+          shared-key: ${{ matrix.os }}-1.95.0
+      - run: cargo test --locked --quiet
 
   deny:
     name: cargo-deny
@@ -70,7 +70,7 @@ jobs:
           toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ubuntu-1.95.0-workspace
+          shared-key: ubuntu-1.95.0
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked --version 0.16.4
       - run: cargo deny check

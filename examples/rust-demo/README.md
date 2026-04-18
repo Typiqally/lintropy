@@ -3,7 +3,7 @@
 This example repo is the fixture for:
 
 ```console
-cargo run -p lintropy-cli -- check examples/rust-demo
+cargo run -p lintropy -- check examples/rust-demo
 ```
 
 Expected diagnostics before `--fix`:
@@ -19,7 +19,7 @@ Expected count: 4 diagnostics across 3 files.
 
 Autofix expectation:
 
-- `cargo run -p lintropy-cli -- check examples/rust-demo --fix` rewrites the
+- `cargo run -p lintropy -- check examples/rust-demo --fix` rewrites the
   `no-unwrap` match in `src/main.rs` from `.unwrap()` to
   `.expect("TODO: handle error")`.
 - The `vec![macro_example.unwrap()]` line in `src/main.rs` is intentional and
