@@ -1,0 +1,51 @@
+---
+source: crates/lintropy-core/tests/engine_snapshots.rs
+assertion_line: 91
+expression: normalize_paths(diagnostics)
+---
+[
+  {
+    "byte_end": 74,
+    "byte_start": 59,
+    "column": 16,
+    "end_column": 31,
+    "end_line": 3,
+    "file": "[file]",
+    "fix": {
+      "byte_end": 74,
+      "byte_start": 59,
+      "replacement": "client.expect(\"TODO: handle error\")"
+    },
+    "line": 3,
+    "message": "avoid .unwrap() on `client`",
+    "rule_id": "no-unwrap",
+    "rule_source": ".lintropy/no-unwrap.rule.yaml",
+    "severity": "warning"
+  },
+  {
+    "byte_end": 109,
+    "byte_start": 80,
+    "column": 5,
+    "end_column": 34,
+    "end_line": 4,
+    "file": "[file]",
+    "line": 4,
+    "message": "avoid println! in committed code",
+    "rule_id": "no-println",
+    "rule_source": ".lintropy/no-println.rule.yaml",
+    "severity": "info"
+  },
+  {
+    "byte_end": 143,
+    "byte_start": 115,
+    "column": 5,
+    "end_column": 33,
+    "end_line": 5,
+    "file": "[file]",
+    "line": 5,
+    "message": "remove TODO comment before merge",
+    "rule_id": "no-todo",
+    "rule_source": ".lintropy/no-todo.rule.yaml",
+    "severity": "warning"
+  }
+]

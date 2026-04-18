@@ -1,19 +1,5 @@
 //! Config loader: turn `lintropy.yaml` plus `.lintropy/**/*.{rule,rules}.yaml`
 //! into a validated [`Config`] value.
-//!
-//! The flow is:
-//!
-//! 1. [`discovery::discover_from`] locates the anchoring `lintropy.yaml`
-//!    and enumerates every rule file under `.lintropy/`.
-//! 2. YAML is deserialised into crate-private raw types that mirror the
-//!    on-disk shape (§4.2–§4.5 of the merged spec).
-//! 3. Every rule is validated at load time: query compilation, capture-name
-//!    references in `message`/`fix`, duplicate ids, custom predicate names
-//!    (via the WP2 seam in [`crate::predicates`]).
-//!
-//! Public entry points mirror the WP1 contract:
-//! [`Config::load_from_root`], [`Config::load_from_path`], and
-//! [`Config::json_schema`].
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -32,31 +18,19 @@ const DEFAULT_SEVERITY: Severity = Severity::Error;
 const DEFAULT_FAIL_ON: Severity = Severity::Error;
 const SUPPORTED_VERSION: u32 = 1;
 
-// ─────────────────────────────── runtime types ───────────────────────────────
-
-/// A fully loaded + validated lintropy config.
 #[derive(Debug)]
 pub struct Config {
-    /// `version:` from `lintropy.yaml`. Currently always `1`.
     pub version: u32,
-    /// Project-wide settings (merged with defaults).
     pub settings: Settings,
-    /// Every rule merged across inline + `.lintropy/` files, deduplicated by id.
     pub rules: Vec<RuleConfig>,
-    /// Non-fatal issues surfaced during load (e.g. a query rule without `@match`).
     pub warnings: Vec<ConfigWarning>,
-    /// Root directory (parent of the anchoring `lintropy.yaml`).
     pub root_dir: PathBuf,
-    /// Path to the anchoring `lintropy.yaml`.
     pub root_config: PathBuf,
 }
 
-/// Project-wide settings from the root `lintropy.yaml`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Settings {
-    /// Exit non-zero when a diagnostic at this severity (or higher) fires.
     pub fail_on: Severity,
-    /// Default severity for rules that omit `severity:`.
     pub default_severity: Severity,
 }
 
@@ -69,88 +43,74 @@ impl Default for Settings {
     }
 }
 
-/// One rule after merging, validation, and query compilation.
 #[derive(Debug)]
 pub struct RuleConfig {
-    /// User-visible identifier.
     pub id: RuleId,
-    /// Resolved severity (falls back to `settings.default_severity`).
     pub severity: Severity,
-    /// Human-facing message template, pre-interpolation.
     pub message: String,
-    /// Optional inclusive gitignore-style globs.
     pub include: Vec<String>,
-    /// Optional exclusive gitignore-style globs.
     pub exclude: Vec<String>,
-    /// Free-form tags for filtering / grouping.
     pub tags: Vec<String>,
-    /// External documentation URL surfaced in diagnostics.
     pub docs_url: Option<String>,
-    /// Language handle; required for query rules, optional otherwise.
     pub language: Option<Language>,
-    /// Discriminated rule body.
     pub kind: RuleKind,
-    /// Replacement template for autofix; query rules only.
     pub fix: Option<String>,
-    /// YAML file that defined this rule.
     pub source_path: PathBuf,
 }
 
-/// Rule kind discriminated on key presence (§4.5 of the spec).
 #[derive(Debug)]
 pub enum RuleKind {
-    /// Tree-sitter query rule — Phase 1.
     Query(QueryRule),
-    /// Regex match rule — Phase 2 (Phase 1 rejects these at load).
     Match(MatchRule),
 }
 
-/// Compiled query body attached to a query rule.
 #[derive(Debug)]
 pub struct QueryRule {
-    /// Original S-expression source, for `lintropy explain`.
     pub source: String,
-    /// Compiled query. Shared via `Arc` so downstream crates can hold a
-    /// handle without recompiling.
     pub compiled: Arc<TsQuery>,
-    /// Parsed custom predicates (see [`crate::predicates`]).
-    pub predicates: Vec<CustomPredicate>,
+    pub predicates_by_pattern: Vec<Vec<CustomPredicate>>,
 }
 
-/// Raw regex body for a Phase 2 match rule. Unused in Phase 1 — kept so
-/// Phase 2 can land without a breaking API change.
+impl QueryRule {
+    pub fn new(source: impl Into<String>, query: TsQuery) -> Result<Self> {
+        let predicates_by_pattern = predicates::parse_general_predicates_by_pattern(&query)?;
+        Ok(Self {
+            source: source.into(),
+            compiled: Arc::new(query),
+            predicates_by_pattern,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MatchRule {
-    /// Regex that, when matched, produces one diagnostic per match.
     pub forbid: Option<String>,
-    /// Regex that must appear in the file; absence produces one diagnostic.
     pub require: Option<String>,
-    /// Whether to enable multiline + dotall flags.
     pub multiline: bool,
 }
 
-/// Non-fatal issue discovered at config load.
 #[derive(Debug, Clone)]
 pub struct ConfigWarning {
-    /// Rule the warning is attached to, if any.
     pub rule_id: Option<RuleId>,
-    /// File that the warning originated from.
     pub source_path: PathBuf,
-    /// Human-facing warning text.
     pub message: String,
 }
 
-// ──────────────────────────── raw YAML deserialisation ───────────────────────
+impl RuleConfig {
+    pub fn query_rule(&self) -> Option<&QueryRule> {
+        match &self.kind {
+            RuleKind::Query(rule) => Some(rule),
+            RuleKind::Match(_) => None,
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRoot {
-    /// Config format version (currently always `1`).
     version: u32,
-    /// Optional project-wide settings.
     #[serde(default)]
     settings: Option<RawSettings>,
-    /// Optional inline rules — see §4.2.
     #[serde(default)]
     rules: Option<Vec<RawRule>>,
 }
@@ -158,10 +118,8 @@ struct RawRoot {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawSettings {
-    /// Exit non-zero when a diagnostic at this severity (or higher) fires.
     #[serde(default)]
     fail_on: Option<Severity>,
-    /// Default severity for rules that omit `severity:`.
     #[serde(default)]
     default_severity: Option<Severity>,
 }
@@ -169,44 +127,29 @@ struct RawSettings {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRule {
-    /// User label; defaults to the file stem in `*.rule.yaml`.
     #[serde(default)]
     id: Option<String>,
-    /// Optional severity override; falls back to `settings.default_severity`.
     #[serde(default)]
     severity: Option<Severity>,
-    /// Human-facing message template; `{{capture}}` interpolation.
     message: String,
-    /// Inclusive gitignore-style globs.
     #[serde(default)]
     include: Vec<String>,
-    /// Exclusive gitignore-style globs.
     #[serde(default)]
     exclude: Vec<String>,
-    /// Free-form tags for filtering.
     #[serde(default)]
     tags: Vec<String>,
-    /// Documentation URL surfaced in diagnostics.
     #[serde(default)]
     docs_url: Option<String>,
-    /// Language name; required when `query` is set.
     #[serde(default)]
     language: Option<String>,
-    /// Tree-sitter S-expression query (query-rule discriminator).
     #[serde(default)]
     query: Option<String>,
-    /// Regex: match = violation (match-rule discriminator, Phase 2).
     #[serde(default)]
     forbid: Option<String>,
-    /// Regex: absence = violation (match-rule discriminator, Phase 2).
     #[serde(default)]
     require: Option<String>,
-    /// Enable regex multiline / dotall flags.
     #[serde(default)]
-    #[allow(dead_code)]
-    // match rules are Phase 2 (§13.2); keep field so deser stays compatible.
     multiline: Option<bool>,
-    /// Replacement template for autofix; query rules only.
     #[serde(default)]
     fix: Option<String>,
 }
@@ -214,23 +157,15 @@ struct RawRule {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RawRulesFile {
-    /// One or more rule stanzas keyed by required `id`.
     rules: Vec<RawRule>,
 }
 
-// ──────────────────────────────── public API ────────────────────────────────
-
 impl Config {
-    /// Walk up from `start`, load the project's config, and validate every rule.
     pub fn load_from_root(start: &Path) -> Result<Config> {
         let discovered = discovery::discover_from(start)?;
         Self::from_discovered(discovered)
     }
 
-    /// Load a single `lintropy.yaml` by explicit path (`--config` override).
-    ///
-    /// Rule files under the config's adjacent `.lintropy/` directory are
-    /// still discovered.
     pub fn load_from_path(config_path: &Path) -> Result<Config> {
         let root_config = config_path
             .canonicalize()
@@ -253,14 +188,6 @@ impl Config {
         })
     }
 
-    /// Emit the JSON Schema for a root `lintropy.yaml` file.
-    ///
-    /// This is a thin wrapper over [`schemars::schema_for!`] on the raw YAML
-    /// shape. The schema covers the root object, settings, and every
-    /// per-rule field. Rule-stanza discrimination on key presence
-    /// (`query` vs `forbid`/`require`) is described inline in field docs
-    /// rather than encoded as a JSON Schema `oneOf` — see the hand-off
-    /// notes for the Phase 2 upgrade plan.
     pub fn json_schema() -> serde_json::Value {
         let schema = schemars::schema_for!(RawRoot);
         serde_json::to_value(&schema).expect("schemars root schema is JSON-serializable")
@@ -292,9 +219,7 @@ impl Config {
                 &settings,
                 &mut warnings,
             )?;
-            if let Some(prev) =
-                seen.insert(built.id.as_str().to_string(), built.source_path.clone())
-            {
+            if let Some(prev) = seen.insert(built.id.as_str().to_string(), built.source_path.clone()) {
                 return Err(LintropyError::DuplicateRuleId {
                     rule_id: built.id.as_str().to_string(),
                     first: prev,
@@ -315,12 +240,6 @@ impl Config {
     }
 }
 
-// ──────────────────────────────── internals ─────────────────────────────────
-
-/// Raw rule pulled from disk plus its provenance: (rule, source_path, stem_default).
-///
-/// `stem_default` is `Some` only for `.rule.yaml` files (single-rule form); its
-/// value becomes the rule's id when the stanza omits `id:` explicitly.
 type RawRuleEntry = (RawRule, PathBuf, Option<String>);
 
 fn parse_root_yaml(path: &Path) -> Result<RawRoot> {
@@ -438,21 +357,17 @@ fn build_query_kind(
             id
         ))
     })?;
-    let query_source = raw
-        .query
-        .clone()
-        .expect("caller guarantees `raw.query` is Some");
-    let ts_lang = language.ts_language();
-
-    let compiled =
-        TsQuery::new(&ts_lang, &query_source).map_err(|e| LintropyError::QueryCompile {
+    let query_source = raw.query.clone().expect("caller guarantees query rule");
+    let compiled = TsQuery::new(&language.ts_language(), &query_source).map_err(|e| {
+        LintropyError::QueryCompile {
             rule_id: id.to_string(),
             source_path: source_path.to_path_buf(),
             message: format!("{e}"),
-        })?;
+        }
+    })?;
 
-    let predicates_vec = predicates::parse_general_predicates(&compiled)
-        .map_err(|e| contextualise_predicate_err(e, id, source_path))?;
+    let predicates_by_pattern = predicates::parse_general_predicates_by_pattern(&compiled)
+        .map_err(|e| contextualize_predicate_err(e, id, source_path))?;
 
     let capture_names: Vec<&str> = compiled.capture_names().to_vec();
     let captures: HashSet<&str> = capture_names.iter().copied().collect();
@@ -475,7 +390,7 @@ fn build_query_kind(
     Ok(RuleKind::Query(QueryRule {
         source: query_source,
         compiled: Arc::new(compiled),
-        predicates: predicates_vec,
+        predicates_by_pattern,
     }))
 }
 
@@ -505,8 +420,7 @@ fn extract_capture_tokens(s: &str) -> Vec<String> {
         if bytes[i] == b'{' && bytes[i + 1] == b'{' {
             let rest_start = i + 2;
             if let Some(end) = s[rest_start..].find("}}") {
-                let raw = &s[rest_start..rest_start + end];
-                let token = raw.trim().to_string();
+                let token = s[rest_start..rest_start + end].trim().to_string();
                 if !token.is_empty() {
                     tokens.push(token);
                 }
@@ -540,8 +454,8 @@ fn resolve_settings(raw: Option<&RawSettings>) -> Settings {
     }
 }
 
-fn contextualise_predicate_err(e: LintropyError, id: &str, source_path: &Path) -> LintropyError {
-    match e {
+fn contextualize_predicate_err(err: LintropyError, id: &str, source_path: &Path) -> LintropyError {
+    match err {
         LintropyError::UnknownPredicate { predicate, .. } => LintropyError::UnknownPredicate {
             rule_id: id.to_string(),
             source_path: source_path.to_path_buf(),
@@ -562,8 +476,8 @@ fn read_file(path: &Path) -> Result<String> {
     std::fs::read_to_string(path).map_err(LintropyError::Io)
 }
 
-fn yaml_err(path: &Path, e: serde_yaml::Error) -> LintropyError {
-    LintropyError::Yaml(format!("{}: {e}", path.display()))
+fn yaml_err(path: &Path, err: serde_yaml::Error) -> LintropyError {
+    LintropyError::Yaml(format!("{}: {err}", path.display()))
 }
 
 #[cfg(test)]
@@ -598,16 +512,16 @@ mod tests {
 
     #[test]
     fn default_settings_match_spec() {
-        let s = Settings::default();
-        assert_eq!(s.fail_on, Severity::Error);
-        assert_eq!(s.default_severity, Severity::Error);
+        let settings = Settings::default();
+        assert_eq!(settings.fail_on, Severity::Error);
+        assert_eq!(settings.default_severity, Severity::Error);
     }
 
     #[test]
     fn json_schema_covers_root_shape() {
         let schema = Config::json_schema();
-        let as_obj = schema.as_object().expect("schema is an object");
-        assert!(as_obj.contains_key("$schema"));
-        assert!(as_obj.contains_key("properties"));
+        let object = schema.as_object().expect("schema is an object");
+        assert!(object.contains_key("$schema"));
+        assert!(object.contains_key("properties"));
     }
 }

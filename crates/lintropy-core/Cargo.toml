@@ -10,16 +10,19 @@ description = "Shared types, errors, and traits for lintropy."
 
 [dependencies]
 lintropy-langs = { path = "../lintropy-langs" }
+globset = { workspace = true }
+ignore = { workspace = true }
+rayon = "1"
+regex = "1"
+schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-schemars = { workspace = true }
-thiserror = { workspace = true }
-tree-sitter = { workspace = true }
-ignore = { workspace = true }
-globset = { workspace = true }
 similar = { workspace = true }
 tempfile = { workspace = true }
+thiserror = { workspace = true }
+tree-sitter = { workspace = true }
 
 [dev-dependencies]
+insta = { version = "1", features = ["json"] }
 tempfile = { workspace = true }
