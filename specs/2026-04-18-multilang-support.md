@@ -162,6 +162,63 @@ selected because the path's extension is not `.tsx`. Users who want
 the tsx grammar must use a `.tsx` file; this matches §4.1 which has
 no stdin support.
 
+### 3.5.1 Query compilation for TypeScript
+
+Tree-sitter `Query::new(language, source)` binds to a specific grammar's
+symbol IDs. The `typescript` and `tsx` grammars have different symbol
+tables, so a single compiled query works for only one of them.
+`QueryRule` today stores `compiled: Arc<TsQuery>` — one query per rule
+(`src/core/config.rs:69-81`).
+
+For TypeScript rules, `build_rule` compiles the query source **twice**
+— once against each grammar — and stores a pair:
+
+```rust
+pub struct QueryRule {
+    pub source: String,
+    pub compiled: Arc<TsQuery>,           // primary grammar
+    pub compiled_tsx: Option<Arc<TsQuery>>, // Some(_) only for TypeScript rules
+}
+```
+
+For Rust / Go / Python rules `compiled_tsx` is always `None`. For
+TypeScript rules:
+
+- If both grammars compile successfully → both stored.
+- If only one compiles (e.g. a query using `jsx_element` succeeds in
+  tsx but fails in typescript) → store the one that compiled. The
+  rule applies only to files parsed by that grammar. Rule load
+  succeeds. Non-fatal.
+- If **neither** compiles → rule load fails with the original query
+  compile error (both grammars' errors joined).
+
+At parse time (`src/core/engine.rs` `run_file`), the engine picks the
+query matching the file's grammar choice. Same path-based logic as
+§3.5 grammar dispatch:
+
+```rust
+let query = if path_is_tsx(path) {
+    rule.compiled_tsx.as_ref().unwrap_or(&rule.compiled)
+} else {
+    &rule.compiled
+};
+```
+
+(`unwrap_or(&rule.compiled)` covers the case where tsx compilation
+failed; the primary is still a typescript-grammar query, which will
+not match any nodes in a tsx-parsed tree but also will not crash.)
+
+Engine-internal bucketing: `RulesByLanguage` today has one `rust` field
+(`src/core/engine.rs:35-37`). Extend to a `HashMap<Language,
+Vec<ScopedRule>>` (or explicit fields per enabled language). Either is
+acceptable; HashMap is cleaner for symmetry, explicit fields are
+zero-overhead. Implementer picks; neither is a spec decision.
+
+Predicate evaluation (`src/core/predicates.rs`) references
+`language.ts_language()` in test helpers only; production code uses
+the already-compiled `TsQuery`. Test helpers update to pass a dummy
+`Path::new("t.rs")`.
+
 ### 3.6 Cargo features
 
 `Cargo.toml`:
@@ -403,7 +460,9 @@ the extra weight; this is an intentional trade-off for zero-config UX.
 |------|--------|
 | `Cargo.toml` | Add optional `tree-sitter-go`, `tree-sitter-python`, `tree-sitter-typescript` deps; `[features]` block with `default = ["lang-go","lang-python","lang-typescript"]`. |
 | `src/langs.rs` | Add `Go`, `Python`, `TypeScript` variants under `#[cfg(feature = "lang-<name>")]`; extend `from_name`, `from_extension`, `extensions`; change `ts_language` signature to take `&Path`; add `language_from_path` helper; expand unit tests per §6.1. |
-| `src/core/engine.rs` | Update `ts_language()` call sites to pass file path. |
+| `src/core/engine.rs` | Update `ts_language()` call sites to pass file path; extend `RulesByLanguage` for all enabled languages; pick tsx vs typescript compiled query at parse time (§3.5.1). |
+| `src/core/config.rs` | Add `compiled_tsx: Option<Arc<TsQuery>>` to `QueryRule`; in `build_rule`, compile TypeScript queries against both grammars per §3.5.1; update `QueryRule::new` signature. |
+| `src/core/predicates.rs` | Update test helpers to pass dummy `&Path` to `ts_language`. |
 | `src/commands/ts_parse.rs` | Make `--lang` optional; add `resolve_language(path, override)` helper; pass path to `ts_language`; adjust error messages per §4.1. |
 | `tests/cli_ts_parse.rs` | Extend with auto-detect + override cases for every lang per §6.2. |
 | `tests/integration_multilang.rs` | New file. Per-lang end-to-end `check` test + TSX vs TS grammar-dispatch test. |
