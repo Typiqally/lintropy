@@ -41,7 +41,13 @@
         "lintropy.path": {
           "type": "string",
           "default": "lintropy",
-          "description": "Path to the lintropy binary. Falls back to PATH lookup if unset."
+          "description": "Path to the lintropy binary. Leave as `lintropy` to search PATH (and, per `lintropy.binarySource`, fall back to auto-download)."
+        },
+        "lintropy.binarySource": {
+          "type": "string",
+          "enum": ["auto", "path"],
+          "default": "auto",
+          "description": "`auto`: if `lintropy` is not on PATH, download the matching release binary from GitHub into the extension's global storage. `path`: never auto-download — require PATH or explicit `lintropy.path`."
         },
         "lintropy.trace.server": {
           "type": "string",
