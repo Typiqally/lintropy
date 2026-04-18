@@ -135,17 +135,15 @@ write and respect the repo’s guardrails.
 | Best use | Style and correctness | Architecture and boundaries |
 | Agent support | Incidental | First-class |
 
-## Roadmap
+## What ships in the workflow
 
-The current direction is:
-
-- Rust-first support
 - repo-root `lintropy.yaml`
 - `.lintropy/**/*.rule.yaml` discovery
-- tree-sitter query rules
-- regex match rules
-- autofix for query-based replacements
+- tree-sitter `query` rules
+- regex `match` rules
+- capture-based messages and autofix
 - text and JSON diagnostics
+- rule-source-aware reporting
 - agent-oriented hooks and schema output
 
 ## License
