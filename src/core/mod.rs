@@ -12,6 +12,7 @@ pub mod template;
 pub mod types;
 
 pub use config::{Config, ConfigWarning, MatchRule, QueryRule, RuleConfig, RuleKind, Settings};
+pub use engine::PreparedRules;
 pub use error::{LintropyError, Result};
 pub use fix::{FixReport, OverlapWarning};
 pub use suppress::{SourceCache, UnusedReason, UnusedSuppression};

@@ -15,11 +15,16 @@ use super::{
     Diagnostic, FixHunk, LintropyError, Result,
 };
 
+/// Walk `files`, read each from disk, and lint in parallel.
+///
+/// Thin wrapper over [`PreparedRules::lint_buffer`]: builds the per-language
+/// rule index once, then for each path reads bytes and delegates to the
+/// buffer entry point. Used by `lintropy check`.
 pub fn run(config: &Config, files: &[PathBuf]) -> Result<Vec<Diagnostic>> {
-    let rules_by_language = RulesByLanguage::new(config)?;
+    let prepared = PreparedRules::prepare(config)?;
     let diagnostics = files
         .par_iter()
-        .map(|path| run_file(path, &rules_by_language))
+        .map(|path| run_file_from_disk(&prepared, path))
         .collect::<Result<Vec<_>>>()?;
 
     let mut flattened: Vec<_> = diagnostics.into_iter().flatten().collect();
@@ -32,7 +37,13 @@ pub fn run(config: &Config, files: &[PathBuf]) -> Result<Vec<Diagnostic>> {
     Ok(flattened)
 }
 
-struct RulesByLanguage<'a> {
+/// Precompiled per-language rule index.
+///
+/// Constructing this compiles all include/exclude globs once so that
+/// subsequent [`PreparedRules::lint_buffer`] calls can skip the work.
+/// The LSP server builds this on `initialize` and reuses it across
+/// `didChange` notifications; `lintropy check` builds it once per run.
+pub struct PreparedRules<'a> {
     rust: Vec<ScopedRule<'a>>,
 }
 
@@ -42,8 +53,9 @@ struct ScopedRule<'a> {
     exclude: Option<Arc<GlobSet>>,
 }
 
-impl<'a> RulesByLanguage<'a> {
-    fn new(config: &'a Config) -> Result<Self> {
+impl<'a> PreparedRules<'a> {
+    /// Compile every query rule in `config` into a language-indexed table.
+    pub fn prepare(config: &'a Config) -> Result<Self> {
         let mut rust = Vec::new();
         for rule in &config.rules {
             let Some(language) = rule.language else {
@@ -63,6 +75,77 @@ impl<'a> RulesByLanguage<'a> {
         }
         Ok(Self { rust })
     }
+
+    /// Lint an in-memory buffer attributed to `path`.
+    ///
+    /// Does not touch the filesystem. The path is used only for language
+    /// detection (via extension) and include/exclude glob matching, and is
+    /// propagated into each emitted [`Diagnostic`].
+    pub fn lint_buffer(&self, path: &Path, src: &[u8]) -> Result<Vec<Diagnostic>> {
+        let Some(language) = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(crate::langs::Language::from_extension)
+        else {
+            return Ok(Vec::new());
+        };
+
+        let scoped_rules = match language {
+            crate::langs::Language::Rust => &self.rust,
+        };
+        if scoped_rules.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut parser = Parser::new();
+        parser
+            .set_language(&language.ts_language())
+            .map_err(|err| {
+                LintropyError::Internal(format!(
+                    "failed to load parser for {}: {err}",
+                    language.name()
+                ))
+            })?;
+        let tree = parser.parse(src, None).ok_or_else(|| {
+            LintropyError::Internal(format!("failed to parse {}", path.display()))
+        })?;
+        let root = tree.root_node();
+
+        let mut diagnostics = Vec::new();
+        for scoped_rule in scoped_rules {
+            if !scoped_rule.matches(path) {
+                continue;
+            }
+            let query_rule = scoped_rule.rule.query_rule().expect("query rule");
+            let mut cursor = QueryCursor::new();
+            for query_match in cursor.matches(query_rule.compiled.as_ref(), root, src) {
+                let pattern_predicates = query_rule
+                    .predicates_by_pattern
+                    .get(query_match.pattern_index)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]);
+                if !pattern_predicates.iter().all(|predicate| {
+                    predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, src)
+                }) {
+                    continue;
+                }
+                diagnostics.push(build_diagnostic(
+                    path,
+                    src,
+                    scoped_rule.rule,
+                    query_rule,
+                    query_match,
+                )?);
+            }
+        }
+
+        Ok(diagnostics)
+    }
+}
+
+fn run_file_from_disk(prepared: &PreparedRules<'_>, path: &Path) -> Result<Vec<Diagnostic>> {
+    let src = std::fs::read(path)?;
+    prepared.lint_buffer(path, &src)
 }
 
 fn compile_globs(patterns: &[String]) -> Result<Option<Arc<GlobSet>>> {
@@ -81,68 +164,6 @@ fn compile_globs(patterns: &[String]) -> Result<Option<Arc<GlobSet>>> {
         .build()
         .map_err(|err| LintropyError::Internal(format!("invalid glob set: {err}")))?;
     Ok(Some(Arc::new(set)))
-}
-
-fn run_file(path: &Path, rules_by_language: &RulesByLanguage<'_>) -> Result<Vec<Diagnostic>> {
-    let Some(language) = path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .and_then(crate::langs::Language::from_extension)
-    else {
-        return Ok(Vec::new());
-    };
-
-    let scoped_rules = match language {
-        crate::langs::Language::Rust => &rules_by_language.rust,
-    };
-    if scoped_rules.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let src = std::fs::read(path)?;
-    let mut parser = Parser::new();
-    parser
-        .set_language(&language.ts_language())
-        .map_err(|err| {
-            LintropyError::Internal(format!(
-                "failed to load parser for {}: {err}",
-                language.name()
-            ))
-        })?;
-    let tree = parser
-        .parse(&src, None)
-        .ok_or_else(|| LintropyError::Internal(format!("failed to parse {}", path.display())))?;
-    let root = tree.root_node();
-
-    let mut diagnostics = Vec::new();
-    for scoped_rule in scoped_rules {
-        if !scoped_rule.matches(path) {
-            continue;
-        }
-        let query_rule = scoped_rule.rule.query_rule().expect("query rule");
-        let mut cursor = QueryCursor::new();
-        for query_match in cursor.matches(query_rule.compiled.as_ref(), root, src.as_slice()) {
-            let pattern_predicates = query_rule
-                .predicates_by_pattern
-                .get(query_match.pattern_index)
-                .map(Vec::as_slice)
-                .unwrap_or(&[]);
-            if !pattern_predicates.iter().all(|predicate| {
-                predicate.apply(&query_match, query_rule.compiled.as_ref(), &root, &src)
-            }) {
-                continue;
-            }
-            diagnostics.push(build_diagnostic(
-                path,
-                &src,
-                scoped_rule.rule,
-                query_rule,
-                query_match,
-            )?);
-        }
-    }
-
-    Ok(diagnostics)
 }
 
 impl ScopedRule<'_> {

@@ -30,6 +30,9 @@
                   <Item>
                     <option name="path" value=".lintropy/**/*.rule.yaml" />
                   </Item>
+                  <Item>
+                    <option name="path" value=".lintropy/no-unwrap.rule.yaml" />
+                  </Item>
                 </list>
               </option>
             </SchemaInfo>

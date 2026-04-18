@@ -6,6 +6,7 @@
 
 pub mod core;
 pub mod langs;
+pub mod lsp;
 pub mod output;
 
 // CLI-internal modules, public only so the `lintropy` binary (src/main.rs)
