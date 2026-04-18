@@ -50,7 +50,13 @@ mod tests {
     fn ascii_offsets_map_to_utf16_columns() {
         let src = "fn main() {\n    let x = 1;\n}\n";
         let pos = byte_to_position(src, src.find("let").unwrap());
-        assert_eq!(pos, Position { line: 1, character: 4 });
+        assert_eq!(
+            pos,
+            Position {
+                line: 1,
+                character: 4
+            }
+        );
     }
 
     #[test]
@@ -58,13 +64,25 @@ mod tests {
         // "let π = 3;" — π is 2 UTF-8 bytes, 1 UTF-16 code unit.
         let src = "let π = 3;\n";
         let pos = byte_to_position(src, src.find('=').unwrap());
-        assert_eq!(pos, Position { line: 0, character: 6 });
+        assert_eq!(
+            pos,
+            Position {
+                line: 0,
+                character: 6
+            }
+        );
     }
 
     #[test]
     fn offset_at_eof_is_clamped() {
         let src = "abc";
         let pos = byte_to_position(src, 9999);
-        assert_eq!(pos, Position { line: 0, character: 3 });
+        assert_eq!(
+            pos,
+            Position {
+                line: 0,
+                character: 3
+            }
+        );
     }
 }

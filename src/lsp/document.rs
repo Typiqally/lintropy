@@ -35,7 +35,14 @@ impl DocumentStore {
     /// Replace the full buffer for `uri` (didOpen / full didChange sync).
     pub fn set(&mut self, uri: Url, text: String, version: i32) {
         let path = uri_to_path(&uri).unwrap_or_else(|| PathBuf::from(uri.path()));
-        self.docs.insert(uri, Document { path, text, version });
+        self.docs.insert(
+            uri,
+            Document {
+                path,
+                text,
+                version,
+            },
+        );
     }
 
     pub fn get(&self, uri: &Url) -> Option<&Document> {

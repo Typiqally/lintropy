@@ -145,7 +145,11 @@ impl Backend {
     /// config and lint the buffer. Returns `None` when no config is
     /// loaded (client gets an empty diagnostic list — explicit signal
     /// rather than stale data).
-    async fn lint(&self, text: &str, path: &std::path::Path) -> Option<Vec<crate::core::Diagnostic>> {
+    async fn lint(
+        &self,
+        text: &str,
+        path: &std::path::Path,
+    ) -> Option<Vec<crate::core::Diagnostic>> {
         let state = self.state.lock().await;
         let config = state.config.as_ref()?;
         let prepared = PreparedRules::prepare(config).ok()?;

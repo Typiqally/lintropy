@@ -206,7 +206,10 @@ mod tests {
     #[cfg(feature = "lang-typescript")]
     #[test]
     fn from_name_resolves_typescript() {
-        assert_eq!(Language::from_name("typescript"), Some(Language::TypeScript));
+        assert_eq!(
+            Language::from_name("typescript"),
+            Some(Language::TypeScript)
+        );
         assert_eq!(Language::TypeScript.name(), "typescript");
         // No `tsx` alias — rule authors use `typescript` for both.
         assert_eq!(Language::from_name("tsx"), None);
@@ -228,10 +231,22 @@ mod tests {
     #[test]
     fn language_from_path_handles_d_ts_compound_suffix() {
         use std::path::Path;
-        assert_eq!(language_from_path(Path::new("src/types.d.ts")), Some(Language::TypeScript));
-        assert_eq!(language_from_path(Path::new("src/api.ts")), Some(Language::TypeScript));
-        assert_eq!(language_from_path(Path::new("src/app.tsx")), Some(Language::TypeScript));
-        assert_eq!(language_from_path(Path::new("src/lib.rs")), Some(Language::Rust));
+        assert_eq!(
+            language_from_path(Path::new("src/types.d.ts")),
+            Some(Language::TypeScript)
+        );
+        assert_eq!(
+            language_from_path(Path::new("src/api.ts")),
+            Some(Language::TypeScript)
+        );
+        assert_eq!(
+            language_from_path(Path::new("src/app.tsx")),
+            Some(Language::TypeScript)
+        );
+        assert_eq!(
+            language_from_path(Path::new("src/lib.rs")),
+            Some(Language::Rust)
+        );
         assert_eq!(language_from_path(Path::new("src/no-ext")), None);
     }
 
