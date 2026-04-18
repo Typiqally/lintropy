@@ -1,0 +1,17 @@
+{
+  "id": "lintropy-dev",
+  "name": "Lintropy (dev)",
+  "description": "Dev-mode language server that launches the freshly-built debug binary from the open lintropy checkout. Rebuild the binary with `cargo build --bin lintropy` (or use the `cargo build lintropy (for LSP)` run config) and restart the server from the LSP Console to pick up changes.",
+  "programArgs": {
+    "default": "$PROJECT_DIR$/target/debug/lintropy lsp"
+  },
+  "fileTypeMappings": [
+    {
+      "fileType": {
+        "name": "Rust",
+        "patterns": ["*.rs"]
+      },
+      "languageId": "rust"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "lintropy",
+  "name": "Lintropy",
+  "description": "Live diagnostics, code actions, and autoreload on rule changes — powered by the lintropy structural linter (tree-sitter + repo-local YAML rules). Requires the `lintropy` binary on PATH. If the IDE cannot find it (e.g. macOS Dock launch), replace the command with the absolute path.",
+  "programArgs": {
+    "default": "lintropy lsp"
+  },
+  "fileTypeMappings": [
+    {
+      "fileType": {
+        "name": "Rust",
+        "patterns": ["*.rs"]
+      },
+      "languageId": "rust"
+    }
+  ]
+}

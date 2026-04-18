@@ -1,0 +1,4 @@
+{
+  "serverTrace": "verbose",
+  "errorReporting": "as_notification"
+}

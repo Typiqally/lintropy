@@ -10,20 +10,38 @@ plugin that turns any external LSP server into a first-class JetBrains
 diagnostic source. Ships on every JetBrains IDE including the free
 Community editions.
 
-### Setup
+### Fast setup — template import (recommended)
 
 1. Install the `lintropy` binary (`cargo install lintropy` or the Homebrew tap).
 2. In your IDE: **Settings → Plugins → Marketplace**, search for
    "LSP4IJ", install, restart.
-3. **Settings → Languages & Frameworks → Language Servers → `+` → New Language Server**.
-4. Fill in:
+3. Export the bundled template to a known directory:
+   ```console
+   lintropy install-lsp-template jetbrains --dir ~/.lintropy/lsp4ij
+   ```
+   (Contributors with a checkout of this repo can point LSP4IJ straight
+   at [`editors/jetbrains/lsp4ij-template/`](./lsp4ij-template) instead
+   and skip the `install-lsp-template` command.)
+4. **View → Tool Windows → LSP Console → `+` → New Language Server →
+   Template → Import from directory…** and pick the directory from
+   step 3.
+5. Confirm the fields are pre-filled (**Name**, **Command**, **Mappings**).
+6. Click **OK**. LSP4IJ spawns the server and diagnostics appear on
+   `.rs` files.
+
+### Manual setup (fallback)
+
+Use this if the template import fails or you want to customise fields.
+
+1. **Settings → Languages & Frameworks → Language Servers → `+` → New Language Server**.
+2. Fill in:
    - **Name**: `lintropy`
    - **Command**: `lintropy lsp`
      (use the absolute path if `lintropy` is not on the IDE's `PATH` —
      e.g. `/opt/homebrew/bin/lintropy lsp`).
-5. Open the **Mappings** tab on the same dialog and add:
+3. Open the **Mappings** tab and add:
    - **File name patterns** → `*.rs` → language id `rust`.
-6. Open the **Configuration** tab and paste:
+4. Open the **Configuration** tab and paste:
    ```json
    {
      "settings": {
@@ -31,8 +49,7 @@ Community editions.
      }
    }
    ```
-7. Click **OK**. LSP4IJ spawns the server and the IDE starts showing
-   lintropy diagnostics inline on `.rs` files.
+5. Click **OK**.
 
 ### Config-reload behavior
 
