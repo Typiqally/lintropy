@@ -113,7 +113,7 @@ lintropy check .</code></pre>
           aria-label="{{ config.site_name }}"
         >{{ config.site_name }}</a>
 
-        {% if not page.is_homepage and nav %}
+        {% if nav %}
           <nav class="lintropy-nav" aria-label="Primary">
             {% for section in nav %}
               {% set section_root = section.children[0] if section.children else section %}
@@ -130,12 +130,6 @@ lintropy check .</code></pre>
           </nav>
         {% endif %}
       </div>
-
-      {% if page.is_homepage %}
-        <div class="lintropy-header-links">
-          <a class="lintropy-header-link" href="{{ 'overview/' | url }}">Docs</a>
-        </div>
-      {% endif %}
 
       {% if config.theme.palette %}
         {% if not config.theme.palette is mapping %}
