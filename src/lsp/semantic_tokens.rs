@@ -31,6 +31,8 @@ pub fn legend() -> SemanticTokensLegend {
             SemanticTokenType::STRING,   // 3: `"literal"`
             SemanticTokenType::NUMBER,   // 4: `-1`, `42`
             SemanticTokenType::COMMENT,  // 5: `; …`
+            SemanticTokenType::PROPERTY, // 6: field name `function:`, `value:`
+            SemanticTokenType::OPERATOR, // 7: `(`, `)`, `_` wildcard, `:`
         ],
         token_modifiers: vec![],
     }
@@ -42,6 +44,8 @@ const TOKEN_TYPE: u32 = 2;
 const TOKEN_STRING: u32 = 3;
 const TOKEN_NUMBER: u32 = 4;
 const TOKEN_COMMENT: u32 = 5;
+const TOKEN_PROPERTY: u32 = 6;
+const TOKEN_OPERATOR: u32 = 7;
 
 /// Tokenise `src` (a full YAML document) and return LSP semantic tokens
 /// for every recognisable element inside every `query: |` block scalar.
@@ -211,16 +215,47 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
             continue;
         }
 
+        if byte == b'(' || byte == b')' {
+            let start_char = utf16_col(body, idx);
+            out.push(AbsToken {
+                line,
+                character: start_char,
+                length: 1,
+                token_type: TOKEN_OPERATOR,
+            });
+            idx += 1;
+            continue;
+        }
+
+        if byte == b'_' && !is_ident_tail(bytes.get(idx + 1).copied()) {
+            // Bare `_` wildcard — structural, not a node kind.
+            let start_char = utf16_col(body, idx);
+            out.push(AbsToken {
+                line,
+                character: start_char,
+                length: 1,
+                token_type: TOKEN_OPERATOR,
+            });
+            idx += 1;
+            continue;
+        }
+
         if byte == b'_' || byte.is_ascii_alphabetic() {
             let end = consume_ident(bytes, idx);
             let slice = &body[idx..end];
             let start_char = utf16_col(body, idx);
             let length = slice.encode_utf16().count() as u32;
+            // An ident followed by `:` is a field name, not a node kind.
+            let token_type = if bytes.get(end).copied() == Some(b':') {
+                TOKEN_PROPERTY
+            } else {
+                TOKEN_TYPE
+            };
             out.push(AbsToken {
                 line,
                 character: start_char,
                 length,
-                token_type: TOKEN_TYPE,
+                token_type,
             });
             idx = end;
             continue;
@@ -228,6 +263,10 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
 
         idx += 1;
     }
+}
+
+fn is_ident_tail(byte: Option<u8>) -> bool {
+    matches!(byte, Some(b) if b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
 fn consume_ident(bytes: &[u8], mut idx: usize) -> usize {
@@ -327,15 +366,28 @@ query: |
         let tokens = tokenize(src).expect("tokens");
         let types: Vec<u32> = tokens.data.iter().map(|t| t.token_type).collect();
 
-        // We should have: call_expression (TYPE), function (TYPE),
-        // field_expression (TYPE), value (TYPE), field (TYPE),
-        // field_identifier (TYPE), @recv (VARIABLE), @method (VARIABLE),
-        // #eq? (FUNCTION), @method (VARIABLE), "unwrap" (STRING),
-        // @match (VARIABLE). At minimum assert every category surfaced.
+        // call_expression (TYPE), function: (PROPERTY), field_expression
+        // (TYPE), value: (PROPERTY), (_) wildcard (OPERATOR), @recv
+        // (VARIABLE), field: (PROPERTY), field_identifier (TYPE),
+        // @method (VARIABLE), #eq? (FUNCTION), "unwrap" (STRING),
+        // @match (VARIABLE), parens (OPERATOR).
         assert!(types.contains(&TOKEN_VARIABLE));
         assert!(types.contains(&TOKEN_FUNCTION));
         assert!(types.contains(&TOKEN_TYPE));
         assert!(types.contains(&TOKEN_STRING));
+        assert!(types.contains(&TOKEN_PROPERTY));
+        assert!(types.contains(&TOKEN_OPERATOR));
+    }
+
+    #[test]
+    fn field_name_followed_by_colon_is_property_not_type() {
+        let src = "query: |\n  (call function: (_))\n";
+        let tokens = tokenize(src).expect("tokens");
+        // `call` (no colon) → TYPE; `function:` → PROPERTY; `_` → OPERATOR.
+        let types: Vec<u32> = tokens.data.iter().map(|t| t.token_type).collect();
+        assert!(types.contains(&TOKEN_TYPE));
+        assert!(types.contains(&TOKEN_PROPERTY));
+        assert!(types.contains(&TOKEN_OPERATOR));
     }
 
     #[test]
