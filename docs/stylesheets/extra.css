@@ -296,6 +296,14 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.lintropy-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-right: auto;
+  min-width: 0;
+}
+
 .lintropy-brand {
   display: inline-flex;
   align-items: center;
@@ -304,13 +312,56 @@
   letter-spacing: -0.01em;
   color: var(--md-default-fg-color);
   text-decoration: none;
-  margin-right: auto;
   padding: 0.35rem 0;
   border: none;
 }
 
 .lintropy-brand:hover {
   color: var(--md-accent-fg-color);
+}
+
+.lintropy-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lintropy-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.lintropy-nav-link:hover {
+  color: var(--md-default-fg-color);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lintropy-nav-link--active {
+  color: var(--md-accent-fg-color);
+  background: rgba(141, 225, 180, 0.08);
+}
+
+.lintropy-nav-link--active:hover {
+  color: var(--md-accent-fg-color);
+  background: rgba(141, 225, 180, 0.14);
+}
+
+@media (max-width: 900px) {
+  .lintropy-nav {
+    display: none;
+  }
 }
 
 .md-header__inner {

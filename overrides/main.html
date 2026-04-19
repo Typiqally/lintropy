@@ -1,10 +1,6 @@
 {% extends "base.html" %}
 
-{% block tabs %}
-{% if not page.is_homepage %}
-  {{ super() }}
-{% endif %}
-{% endblock %}
+{% block tabs %}{% endblock %}
 
 {% block content %}
 {% if page.is_homepage %}
@@ -110,11 +106,30 @@ lintropy check .</code></pre>
         {% include ".icons/material/menu" ~ ".svg" %}
       </label>
 
-      <a
-        class="lintropy-brand"
-        href="{{ nav.homepage.url | url }}"
-        aria-label="{{ config.site_name }}"
-      >{{ config.site_name }}</a>
+      <div class="lintropy-header-left">
+        <a
+          class="lintropy-brand"
+          href="{{ nav.homepage.url | url }}"
+          aria-label="{{ config.site_name }}"
+        >{{ config.site_name }}</a>
+
+        {% if not page.is_homepage and nav %}
+          <nav class="lintropy-nav" aria-label="Primary">
+            {% for section in nav %}
+              {% set section_root = section.children[0] if section.children else section %}
+              {% if section_root is not none and section_root.url is not none %}
+                {% set page_root = (page.url.split('/')[0]) if page and page.url else '' %}
+                {% set section_url_root = section_root.url.split('/')[0] %}
+                {% set is_active = page_root == section_url_root and section_url_root != '' %}
+                <a
+                  class="lintropy-nav-link {% if is_active %}lintropy-nav-link--active{% endif %}"
+                  href="{{ section_root.url | url }}"
+                >{{ section.title }}</a>
+              {% endif %}
+            {% endfor %}
+          </nav>
+        {% endif %}
+      </div>
 
       {% if page.is_homepage %}
         <div class="lintropy-header-links">
@@ -142,12 +157,5 @@ lintropy check .</code></pre>
         </div>
       {% endif %}
     </nav>
-    {% if not page.is_homepage %}
-      {% if "navigation.tabs.sticky" in features %}
-        {% if "navigation.tabs" in features %}
-          {% include "partials/tabs.html" %}
-        {% endif %}
-      {% endif %}
-    {% endif %}
   </header>
 {% endblock %}
