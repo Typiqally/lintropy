@@ -29,20 +29,9 @@ theme:
     - search.highlight
     - search.share
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: black
-      accent: green
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: black
-      accent: green
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+    scheme: slate
+    primary: black
+    accent: green
 
 markdown_extensions:
   - admonition
@@ -79,6 +68,12 @@ nav:
       - Rule language: rule-language.md
       - CLI guide: cli.md
   - Integrations:
-      - Editors and agents: editor-and-agent-setup.md
+      - integrations/index.md
+      - VS Code & Cursor: integrations/vscode.md
+      - JetBrains IDEs: integrations/jetbrains.md
+      - Claude Code: integrations/claude-code.md
+      - Other LSP editors: integrations/other-editors.md
+      - Other agents: integrations/other-agents.md
+      - Post-write hook: integrations/post-write-hook.md
   - Support:
       - Troubleshooting: troubleshooting.md

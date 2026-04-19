@@ -214,7 +214,7 @@ lintropy lsp install jetbrains     # JetBrains IDEs (LSP4IJ template)
 lintropy lsp install claude-code   # Claude Code plugin
 ```
 
-Each target gives you live diagnostics, quickfixes, config reload, and semantic-token highlighting for the `query: |` DSL. No separate "query syntax" extension. Full walkthrough in [`docs/editor-and-agent-setup.md`](docs/editor-and-agent-setup.md).
+Each target gives you live diagnostics, quickfixes, config reload, and semantic-token highlighting for the `query: |` DSL. No separate "query syntax" extension. Per-integration walkthroughs live under [`docs/integrations/`](docs/integrations/index.md).
 
 ### VS Code and Cursor
 

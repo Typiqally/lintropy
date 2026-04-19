@@ -79,5 +79,5 @@ The most important commands for users are:
 - [Getting Started](./getting-started.md)
 - [Configuration](./configuration.md)
 - [CLI Guide](./cli.md)
-- [Editor And Agent Setup](./editor-and-agent-setup.md)
+- [Integrations](./integrations/index.md)
 - [Rule Language](./rule-language.md)

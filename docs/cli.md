@@ -179,8 +179,8 @@ for a one-time IDE import. For Claude Code it generates the plugin
 manifest fresh (version + feature-gated extension map + absolute binary
 path) and shells out to `claude plugin install`.
 
-See [`docs/editor-and-agent-setup.md`](editor-and-agent-setup.md) for the
-full walkthrough including the Claude Code marketplace flow.
+See [`Integrations`](integrations/index.md) for per-target walkthroughs
+including the Claude Code marketplace flow.
 
 ## Suggested daily workflow
 
