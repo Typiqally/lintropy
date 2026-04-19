@@ -20,7 +20,9 @@
 
 [data-md-color-primary="black"] .md-header,
 [data-md-color-scheme="slate"] .md-header {
-  background: var(--md-default-bg-color);
+  background: transparent;
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   box-shadow: none;
   border-bottom: none;
 }
@@ -36,8 +38,10 @@
 
 [data-md-color-primary="black"] .md-tabs,
 [data-md-color-scheme="slate"] .md-tabs {
-  background: var(--md-default-bg-color);
+  background: transparent;
   color: var(--md-default-fg-color--light);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: none;
 }
 
@@ -91,17 +95,170 @@
   line-height: 1.2;
 }
 
-.md-typeset .md-button {
+.md-typeset {
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.md-typeset h2 {
+  margin-top: 2.6rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.md-typeset h1 + h2,
+.md-typeset .md-content h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 1.4rem;
+}
+
+.md-typeset h3 {
+  margin-top: 1.8rem;
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset a {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(141, 225, 180, 0.28);
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.md-typeset a:hover {
+  border-bottom-color: var(--md-accent-fg-color);
+}
+
+.md-typeset a.headerlink,
+.md-typeset a.md-content__button,
+.md-typeset .md-nav a,
+.md-typeset .md-typeset__table a {
+  border-bottom: none;
+}
+
+.md-typeset hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  margin: 2rem 0;
+}
+
+/* Inline code pill */
+.md-typeset code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--md-code-fg-color);
+  font-size: 0.86em;
+}
+
+.md-typeset a code {
+  color: inherit;
+}
+
+/* Code blocks: frame with subtle border, deeper bg */
+.md-typeset pre > code {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0e0e0e;
+  padding: 0.9rem 1.1rem !important;
+}
+
+.md-typeset .highlight pre > code {
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+/* Scrollbars inside code */
+.md-typeset pre > code::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.md-typeset pre > code::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 }
 
-.md-typeset pre > code {
-  border-radius: 1rem;
+/* Reset padding on code pills inside pre (no double-border) */
+.md-typeset pre code {
+  border: none;
+  background: transparent;
+}
+
+/* Tables */
+.md-typeset table:not([class]) {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 0.82rem;
+}
+
+.md-typeset table:not([class]) th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.md-typeset table:not([class]) tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.md-typeset table:not([class]) tr:last-child {
+  border-bottom: none;
+}
+
+.md-typeset .md-button {
+  border-radius: 999px;
+  border-bottom: none;
 }
 
 .md-typeset .admonition,
 .md-typeset details {
   border-radius: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.md-typeset .admonition > .admonition-title,
+.md-typeset details > summary {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Sidebar + TOC */
+.md-nav__title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--md-default-fg-color--lighter);
+  font-weight: 700;
+}
+
+.md-nav__link {
+  font-size: 0.78rem;
+}
+
+.md-nav--secondary .md-nav__link {
+  font-size: 0.75rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-nav--secondary .md-nav__link--active {
+  color: var(--md-accent-fg-color);
+}
+
+/* Footer */
+.md-footer,
+.md-footer-meta {
+  background: transparent;
+}
+
+.md-footer-meta {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .md-header__title {
