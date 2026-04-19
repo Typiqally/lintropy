@@ -1,0 +1,9 @@
+severity: warning
+description: "Flags bare print() calls; prefer the logging module."
+message: "avoid print(); use the logging module"
+include: ["src/**/*.py"]
+language: python
+query: |
+  (call
+    function: (identifier) @fn
+    (#eq? @fn "print")) @match

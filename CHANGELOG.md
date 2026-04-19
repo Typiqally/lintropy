@@ -37,8 +37,15 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   idempotently. `lintropy hook` reads a Claude-style stdin payload, scopes
   the engine to one file, and writes diagnostics to stderr with exit code
   `0` / `2` per §15.
-- **Example repo.** `examples/rust-demo/` with four canonical diagnostics
-  across three files, used as the integration-test fixture.
+- **Example repos.** `examples/rust-demo/` with four canonical diagnostics
+  across three files, used as the integration-test fixture. Parallel
+  single-language demos ship for the other supported languages:
+  `examples/go-demo/` (`no-fmt-println`, `no-todo-comment`),
+  `examples/python-demo/` (`no-print`, `no-todo-comment`), and
+  `examples/typescript-demo/` (`no-console-log`, `no-any-type`,
+  `no-todo-comment`; covers both `.ts` and `.tsx`). Each ships with a
+  `README.md` listing the expected diagnostics for
+  `lintropy check examples/<lang>-demo --config examples/<lang>-demo/lintropy.yaml`.
 - **Integration tests.** `tests/integration_{check,fix,hook,init}.rs` at
   the crate root exercise the full pipeline end-to-end.
 - **CI.** fmt + clippy (`-D warnings`) + test matrix

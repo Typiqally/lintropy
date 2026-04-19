@@ -1,0 +1,8 @@
+severity: warning
+description: "Flags `any` type annotations; prefer `unknown` or a concrete type."
+message: "avoid the `any` type; use `unknown` or a concrete type"
+include: ["src/**/*.ts", "src/**/*.tsx"]
+language: typescript
+query: |
+  ((predefined_type) @match
+    (#eq? @match "any"))

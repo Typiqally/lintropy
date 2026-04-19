@@ -1,0 +1,12 @@
+severity: warning
+description: "Flags console.log calls across .ts and .tsx; use a structured logger."
+message: "avoid console.log; use a structured logger"
+include: ["src/**/*.ts", "src/**/*.tsx"]
+language: typescript
+query: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @obj
+      property: (property_identifier) @prop)
+    (#eq? @obj "console")
+    (#eq? @prop "log")) @match

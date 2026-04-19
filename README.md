@@ -59,7 +59,7 @@ Not yet on crates.io.
 
 ## Supported languages
 
-- **Rust** — structural `query` rules via tree-sitter
+- **Rust**, **Go**, **Python**, **TypeScript** (incl. `.tsx`) — structural `query` rules via tree-sitter
 - **Any text file** — regex `match` rules
 
 More tree-sitter languages planned. Vote or contribute via issues.
@@ -184,6 +184,13 @@ You should see four warnings (`no-unwrap`, `no-println`, `user-use-builder`,
 lintropy check . --fix          # apply the no-unwrap autofix in place
 lintropy check . --fix-dry-run  # print the unified diff instead
 ```
+
+Analogous single-language demos ship for the other supported languages:
+
+- [`examples/go-demo/`](examples/go-demo) — `no-fmt-println`, `no-todo-comment`
+- [`examples/python-demo/`](examples/python-demo) — `no-print`, `no-todo-comment`
+- [`examples/typescript-demo/`](examples/typescript-demo) — `no-console-log`,
+  `no-any-type`, `no-todo-comment` (covers `.ts` and `.tsx`)
 
 To scaffold lintropy inside your own repo:
 

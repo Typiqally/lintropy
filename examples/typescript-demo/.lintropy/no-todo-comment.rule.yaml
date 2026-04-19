@@ -1,0 +1,8 @@
+severity: warning
+description: "Flags TODO comments without a ticket reference."
+message: "TODO comment without ticket id; add `TODO(PROJ-123)` or remove"
+language: typescript
+query: |
+  ((comment) @match
+    (#match? @match "TODO")
+    (#not-match? @match "TODO\\([A-Z]+-[0-9]+\\)"))
