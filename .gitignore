@@ -6,6 +6,10 @@
 /website/dist/
 /website/node_modules/
 
+# `lintropy install claude-code` output (regenerated locally, contains
+# machine-specific absolute paths)
+/lintropy-claude-code-plugin/
+
 # Worktrees
 .worktrees/
 
