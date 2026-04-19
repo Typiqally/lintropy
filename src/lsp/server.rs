@@ -18,12 +18,13 @@ use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result as JsonRpcResult;
 use tower_lsp::lsp_types::{
     CodeActionOrCommand, CodeActionParams, CodeActionProviderCapability, CodeActionResponse,
-    DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
-    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, SemanticTokensFullOptions,
-    SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
-    SemanticTokensServerCapabilities, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
-    TextDocumentSyncKind, Url, WorkDoneProgressOptions,
+    CompletionOptions, CompletionParams, CompletionResponse, DidChangeConfigurationParams,
+    DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, InitializeParams, InitializeResult,
+    InitializedParams, MessageType, SemanticTokensFullOptions, SemanticTokensOptions,
+    SemanticTokensParams, SemanticTokensResult, SemanticTokensServerCapabilities,
+    ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    WorkDoneProgressOptions,
 };
 use tower_lsp::{Client, LanguageServer};
 
@@ -43,7 +44,7 @@ fn is_rule_file(path: &std::path::Path) -> bool {
 use super::actions::{quickfix_for, ranges_intersect};
 use super::diagnostics::to_lsp;
 use super::document::DocumentStore;
-use super::{rule_lint, semantic_tokens};
+use super::{completion, rule_lint, semantic_tokens};
 
 /// Shared LSP backend.
 pub struct Backend {
@@ -202,6 +203,22 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::INCREMENTAL,
                 )),
                 code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+                completion_provider: Some(CompletionOptions {
+                    // `@` / `#` / `(` → query context; `{` → template
+                    // interpolation; `:` / space → `language:` value.
+                    // Clients still send completion on Ctrl-Space, so
+                    // coverage is additive.
+                    trigger_characters: Some(vec![
+                        "@".into(),
+                        "#".into(),
+                        "(".into(),
+                        "{".into(),
+                        ":".into(),
+                        " ".into(),
+                    ]),
+                    resolve_provider: Some(false),
+                    ..CompletionOptions::default()
+                }),
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensOptions(
                         SemanticTokensOptions {
@@ -295,6 +312,26 @@ impl LanguageServer for Backend {
     async fn did_change_watched_files(&self, _params: DidChangeWatchedFilesParams) {
         self.reload_config().await;
         self.republish_all().await;
+    }
+
+    async fn completion(
+        &self,
+        params: CompletionParams,
+    ) -> JsonRpcResult<Option<CompletionResponse>> {
+        let uri = params.text_document_position.text_document.uri;
+        let (text, path) = {
+            let state = self.state.lock().await;
+            match state.documents.get(&uri) {
+                Some(doc) => (doc.text.clone(), doc.path.clone()),
+                None => return Ok(None),
+            }
+        };
+        let items = completion::complete(&path, &text, params.text_document_position.position);
+        if items.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(CompletionResponse::Array(items)))
+        }
     }
 
     async fn code_action(

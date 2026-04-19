@@ -7,6 +7,7 @@
 //! a subprocess and talk to it via LSP.
 
 mod actions;
+mod completion;
 mod diagnostics;
 mod document;
 mod position;

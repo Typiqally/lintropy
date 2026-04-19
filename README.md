@@ -229,9 +229,12 @@ delivers diagnostics, quickfixes, config-reload, **and** semantic-token
 highlighting for the `query:` DSL — all over LSP, no separate grammar
 extension.
 
-For JetBrains this unpacks the LSP4IJ template (which in turn delivers
-diagnostics + `query:` highlighting from the same server). Still needs
-one IDE-side import step — see [JetBrains IDEs](#jetbrains-ides) below.
+For JetBrains this unpacks the LSP4IJ template, which delivers
+diagnostics and inline rule-file linting. The `query: |` DSL keeps the
+YAML plugin's native colouring — LSP-side semantic tokens render in VS
+Code / Cursor / Neovim / Helix / Zed but are discarded by LSP4IJ's
+PSI-leaf filter; see [JetBrains IDEs](#jetbrains-ides) for details.
+Still needs one IDE-side import step.
 
 The rest of this section covers the per-editor details, JSON schema mappings
 for editor-side YAML completion, and the underlying building-block commands.
