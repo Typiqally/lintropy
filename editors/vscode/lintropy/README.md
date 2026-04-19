@@ -12,6 +12,9 @@ One command (via the `lintropy` CLI):
 lintropy install-editor vscode        # or: cursor
 ```
 
+From a source checkout, that command runs the local extension build,
+packages a `.vsix`, and installs it into the chosen editor.
+
 The extension activates automatically when your workspace contains
 `lintropy.yaml` or a `.lintropy/` directory, or when you open a Rust file.
 If the `lintropy` binary is not on PATH, the extension auto-downloads the

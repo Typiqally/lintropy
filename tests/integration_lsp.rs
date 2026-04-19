@@ -29,9 +29,15 @@ struct LspProcess {
 
 impl LspProcess {
     fn spawn(cwd: &Path) -> Self {
+        Self::spawn_with_args(cwd, &[])
+    }
+
+    fn spawn_with_args(cwd: &Path, extra_args: &[&str]) -> Self {
         let bin = assert_cmd::cargo::cargo_bin("lintropy");
-        let mut child = Command::new(bin)
-            .arg("lsp")
+        let mut command = Command::new(bin);
+        command.arg("lsp");
+        command.args(extra_args);
+        let mut child = command
             .current_dir(cwd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -95,6 +101,36 @@ impl Drop for LspProcess {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+#[test]
+fn accepts_stdio_flag_for_editor_clients() {
+    let demo = rust_demo();
+    let mut lsp = LspProcess::spawn_with_args(&demo, &["--stdio"]);
+
+    let root_uri = format!("file://{}", demo.display());
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "processId": null,
+            "rootUri": root_uri,
+            "capabilities": {},
+            "workspaceFolders": [{
+                "uri": root_uri,
+                "name": "rust-demo"
+            }]
+        }
+    }));
+
+    let init_response = lsp.recv_until(Duration::from_secs(5), |msg| {
+        msg.get("id") == Some(&json!(1))
+    });
+    assert!(
+        init_response.get("result").is_some(),
+        "initialize failed with --stdio: {init_response}"
+    );
 }
 
 #[test]

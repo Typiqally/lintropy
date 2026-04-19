@@ -45,13 +45,20 @@
         },
         "lintropy.binarySource": {
           "type": "string",
-          "enum": ["auto", "path"],
+          "enum": [
+            "auto",
+            "path"
+          ],
           "default": "auto",
           "description": "`auto`: if `lintropy` is not on PATH, download the matching release binary from GitHub into the extension's global storage. `path`: never auto-download — require PATH or explicit `lintropy.path`."
         },
         "lintropy.trace.server": {
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Trace LSP traffic between VS Code and the server."
         }
@@ -65,9 +72,9 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -w -p ./",
-    "package": "vsce package --no-yarn --no-dependencies -o lintropy.vsix"
+    "compile": "tsc --noEmit -p ./ && node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "pnpm run compile && vsce package --no-yarn --no-dependencies -o lintropy.vsix"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
@@ -76,6 +83,7 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.1.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.4.0"
   }
 }

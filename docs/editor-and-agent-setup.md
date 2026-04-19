@@ -39,6 +39,9 @@ lintropy install-lsp-extension vscode
 lintropy install-lsp-extension cursor
 ```
 
+From a source checkout, this builds the local extension, packages a `.vsix`,
+and installs it into the target editor.
+
 The extension starts `lintropy lsp`, publishes diagnostics as buffers change, and exposes quickfix actions when a diagnostic carries an autofix.
 
 The VS Code / Cursor client resolves the `lintropy` binary in this order:

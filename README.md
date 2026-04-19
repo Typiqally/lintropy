@@ -253,7 +253,7 @@ lintropy install-editor vscode       # or: cursor
 ```
 
 Under the hood this calls `lintropy install-lsp-extension vscode`, which
-downloads the matching `.vsix` from the GitHub release and hands it to
+builds the local extension source into a `.vsix` and hands it to
 `code --install-extension`. The extension registers `.rs` files plus
 `lintropy.yaml` / `.lintropy/**/*.yaml` as LSP documents; live diagnostics
 flow for the Rust files and semantic-token highlighting flows for the
@@ -269,7 +269,7 @@ a Rust file is sufficient even on a machine where `lintropy` is not on PATH.
 Other settings: `lintropy.enable`, `lintropy.trace.server`, `lintropy.binarySource`
 (see [`editors/vscode/lintropy/README.md`](editors/vscode/lintropy/README.md)).
 
-Contributors with a checkout can build + install the local `.vsix` directly:
+Contributors can still build + install the local `.vsix` manually:
 
 ```console
 cd editors/vscode/lintropy

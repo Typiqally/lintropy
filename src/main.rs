@@ -40,7 +40,7 @@ fn dispatch(cli: Cli) -> Result<u8, CliError> {
         Some(Command::InstallEditor(args)) => commands::install_editor::run(args),
         Some(Command::InstallLspExtension(args)) => commands::install_lsp_extension::run(args),
         Some(Command::InstallLspTemplate(args)) => commands::install_lsp_template::run(args),
-        Some(Command::Lsp) => lintropy::lsp::run(),
+        Some(Command::Lsp(_args)) => lintropy::lsp::run(),
         None => commands::check::run(cli::CheckArgs::default()),
     }
 }

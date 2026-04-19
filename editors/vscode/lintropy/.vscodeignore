@@ -2,6 +2,8 @@
 .vscode-test/**
 src/**
 .gitignore
+pnpm-lock.yaml
+esbuild.mjs
 .yarnrc
 tsconfig.json
 **/tsconfig.json

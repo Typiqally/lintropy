@@ -47,7 +47,7 @@ pub enum Command {
     #[command(name = "install-lsp-template")]
     InstallLspTemplate(InstallLspTemplateArgs),
     /// Run the Language Server Protocol backend over stdio.
-    Lsp,
+    Lsp(LspArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -183,6 +183,13 @@ pub struct HookArgs {
     pub verbose: bool,
 }
 
+#[derive(Debug, Default, Args)]
+pub struct LspArgs {
+    /// Accept VS Code-style transport hints; stdio is the only mode today.
+    #[arg(long, hide = true)]
+    pub stdio: bool,
+}
+
 #[derive(Debug, Args)]
 pub struct ExplainArgs {
     /// Rule id to describe (e.g. `no-unwrap`).
@@ -268,20 +275,12 @@ pub struct InstallLspExtensionArgs {
     #[arg(long, value_name = "NAME")]
     pub profile: Option<String>,
 
-    /// Override the version of the `.vsix` to download. Defaults to the
-    /// CLI's own version (so the extension matches the binary exactly).
-    #[arg(long, value_name = "VERSION")]
-    pub version: Option<String>,
-
-    /// Source a pre-downloaded `.vsix` instead of hitting the network.
-    #[arg(long, value_name = "PATH")]
-    pub vsix: Option<PathBuf>,
-
-    /// Write the downloaded `.vsix` to disk instead of invoking the editor.
+    /// Build the `.vsix` from the checked-out extension source and write it
+    /// to disk instead of invoking the editor.
     #[arg(long = "package-only")]
     pub package_only: bool,
 
-    /// Output path for `--package-only`. Defaults to `./lintropy-<version>.vsix`.
+    /// Output path for `--package-only`. Defaults to `./lintropy.vsix`.
     #[arg(long, short = 'o', value_name = "PATH", requires = "package_only")]
     pub output: Option<PathBuf>,
 }
@@ -333,15 +332,6 @@ pub struct InstallEditorArgs {
     /// Install into a named VS Code / Cursor profile.
     #[arg(long, value_name = "NAME")]
     pub profile: Option<String>,
-
-    /// Pin the VS Code `.vsix` to a specific version. Defaults to the
-    /// CLI's own version.
-    #[arg(long, value_name = "VERSION")]
-    pub version: Option<String>,
-
-    /// Source a pre-downloaded `.vsix` instead of hitting GitHub Releases.
-    #[arg(long, value_name = "PATH")]
-    pub vsix: Option<PathBuf>,
 
     /// Overwrite existing JetBrains bundle / template dirs in place.
     #[arg(long)]

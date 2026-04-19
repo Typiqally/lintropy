@@ -184,6 +184,9 @@ lintropy install-lsp-extension cursor --profile Default
 lintropy install-lsp-extension --package-only -o ./lintropy.vsix
 ```
 
+This builds the checked-out extension source with `pnpm`, packages a local
+`.vsix`, and then either installs it into the editor or writes it to disk.
+
 JetBrains LSP4IJ template:
 
 ```console

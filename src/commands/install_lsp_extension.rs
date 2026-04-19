@@ -1,11 +1,9 @@
-//! `lintropy install-lsp-extension vscode|cursor` — download the
-//! matching-version `.vsix` from the GitHub release and hand it to the
-//! editor's `--install-extension` flag.
+//! `lintropy install-lsp-extension vscode|cursor` — build the VS Code /
+//! Cursor extension from the local checkout, package it into a `.vsix`,
+//! and hand that artifact to the editor's `--install-extension` flag.
 //!
-//! Pinning the downloaded extension to the binary's own version keeps
-//! the LSP client and server compatible (same message shapes,
-//! capabilities, quickfix schema). Users who want a specific version
-//! can pass `--version` or a pre-downloaded file with `--vsix`.
+//! This keeps the installed extension aligned with the current checkout
+//! instead of relying on a prebuilt release artifact.
 
 use std::fs;
 use std::path::PathBuf;
@@ -14,42 +12,28 @@ use std::process::Command;
 use crate::cli::{InstallLspExtensionArgs, LspExtensionEditor};
 use crate::exit::{CliError, EXIT_OK};
 
-const REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
-
 pub fn run(args: InstallLspExtensionArgs) -> Result<u8, CliError> {
-    let version = args
-        .version
-        .clone()
-        .unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
+    let extension_dir = extension_source_dir()?;
+    ensure_tool("pnpm")?;
 
-    // Resolve the .vsix: either a user-supplied local path (skip network)
-    // or a download from the matching GitHub release.
-    let (vsix_path, owned_tmp) = match args.vsix.as_ref() {
-        Some(local) => {
-            if !local.is_file() {
-                return Err(CliError::user(format!(
-                    "--vsix path does not exist: {}",
-                    local.display()
-                )));
-            }
-            (local.clone(), None)
-        }
-        None => {
-            let tmp = download_vsix(&version)?;
-            let path = tmp.path().to_path_buf();
-            (path, Some(tmp))
-        }
-    };
-
-    if args.package_only {
-        let default_name = format!("lintropy-{version}.vsix");
-        let target = args.output.unwrap_or_else(|| PathBuf::from(&default_name));
+    let (vsix_path, _owned_tmpdir) = if args.package_only {
+        let target = args
+            .output
+            .unwrap_or_else(|| PathBuf::from("lintropy.vsix"));
         if let Some(parent) = target.parent().filter(|p| !p.as_os_str().is_empty()) {
             fs::create_dir_all(parent)?;
         }
-        fs::copy(&vsix_path, &target)?;
-        println!("packaged {}", target.display());
-        drop(owned_tmp);
+        (target, None)
+    } else {
+        let tmpdir =
+            tempfile::tempdir().map_err(|err| CliError::internal(format!("tempdir: {err}")))?;
+        (tmpdir.path().join("lintropy.vsix"), Some(tmpdir))
+    };
+
+    build_vsix(&extension_dir, &vsix_path)?;
+
+    if args.package_only {
+        println!("packaged {}", vsix_path.display());
         return Ok(EXIT_OK);
     }
 
@@ -60,11 +44,7 @@ pub fn run(args: InstallLspExtensionArgs) -> Result<u8, CliError> {
         LspExtensionEditor::Vscode => "code",
         LspExtensionEditor::Cursor => "cursor",
     };
-    if which(cli_bin).is_none() {
-        return Err(CliError::user(format!(
-            "`{cli_bin}` not found in PATH — install the editor's shell command first"
-        )));
-    }
+    ensure_tool(cli_bin)?;
 
     let mut cmd = Command::new(cli_bin);
     if let Some(profile) = args.profile.as_deref() {
@@ -82,40 +62,96 @@ pub fn run(args: InstallLspExtensionArgs) -> Result<u8, CliError> {
             "`{cli_bin} --install-extension` exited with {status}"
         )));
     }
-    println!("installed lintropy (v{version}) into {cli_bin}");
-    drop(owned_tmp);
+    println!("installed lintropy into {cli_bin}");
     Ok(EXIT_OK)
 }
 
-/// Download `lintropy-<version>.vsix` into a self-deleting tempfile.
-fn download_vsix(version: &str) -> Result<tempfile::NamedTempFile, CliError> {
-    if which("curl").is_none() {
-        return Err(CliError::user(
-            "curl not found in PATH — install curl or pass --vsix PATH to skip the download",
-        ));
-    }
-
-    let url = format!("{REPO_URL}/releases/download/v{version}/lintropy-{version}.vsix");
-    let tmp = tempfile::Builder::new()
-        .prefix("lintropy-lsp-")
-        .suffix(".vsix")
-        .tempfile()
-        .map_err(|err| CliError::internal(format!("tempfile: {err}")))?;
-
-    eprintln!("downloading {url}");
-    let status = Command::new("curl")
-        .args(["-fsSL", "--retry", "3", "-o"])
-        .arg(tmp.path())
-        .arg(&url)
-        .status()
-        .map_err(|err| CliError::internal(format!("spawn curl: {err}")))?;
-    if !status.success() {
+fn extension_source_dir() -> Result<PathBuf, CliError> {
+    let dir = std::env::var_os("LINTROPY_VSCODE_EXTENSION_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("editors")
+                .join("vscode")
+                .join("lintropy")
+        });
+    if !dir.join("package.json").is_file() {
         return Err(CliError::user(format!(
-            "download failed for {url} (exit {status}). \
-             The release may not exist yet — pass --version to pin to a released version."
+            "VS Code extension source not found at {}",
+            dir.display()
         )));
     }
-    Ok(tmp)
+    Ok(dir)
+}
+
+fn build_vsix(extension_dir: &PathBuf, output: &PathBuf) -> Result<(), CliError> {
+    if output.is_file() {
+        fs::remove_file(output)?;
+    }
+
+    run_in_dir("pnpm", ["install"], extension_dir)?;
+    run_in_dir("pnpm", ["run", "compile"], extension_dir)?;
+
+    let output_arg = output.to_str().ok_or_else(|| {
+        CliError::user(format!("non-utf8 path not supported: {}", output.display()))
+    })?;
+    run_in_dir(
+        "pnpm",
+        [
+            "exec",
+            "vsce",
+            "package",
+            "--no-yarn",
+            "--no-dependencies",
+            "-o",
+            output_arg,
+        ],
+        extension_dir,
+    )?;
+
+    if !output.is_file() {
+        return Err(CliError::internal(format!(
+            "extension build did not produce {}",
+            output.display()
+        )));
+    }
+    Ok(())
+}
+
+fn run_in_dir<I, S>(bin: &str, args: I, dir: &PathBuf) -> Result<(), CliError>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let collected: Vec<std::ffi::OsString> = args
+        .into_iter()
+        .map(|arg| arg.as_ref().to_os_string())
+        .collect();
+    let status = Command::new(bin)
+        .args(&collected)
+        .current_dir(dir)
+        .status()
+        .map_err(|err| CliError::internal(format!("spawn {bin}: {err}")))?;
+    if !status.success() {
+        let rendered = collected
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" ");
+        return Err(CliError::user(format!(
+            "`{bin} {rendered}` exited with {status}"
+        )));
+    }
+    Ok(())
+}
+
+fn ensure_tool(bin: &str) -> Result<(), CliError> {
+    if which(bin).is_none() {
+        return Err(CliError::user(format!(
+            "`{bin}` not found in PATH — install it first"
+        )));
+    }
+    Ok(())
 }
 
 fn which(bin: &str) -> Option<PathBuf> {
