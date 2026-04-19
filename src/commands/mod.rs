@@ -8,7 +8,6 @@ pub mod init;
 pub mod install_editor;
 pub mod install_lsp_extension;
 pub mod install_lsp_template;
-pub mod install_textmate_bundle;
 pub mod rules;
 pub mod schema;
 pub mod ts_parse;

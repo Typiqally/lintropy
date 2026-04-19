@@ -5,39 +5,6 @@ use predicates::prelude::*;
 use std::fs;
 
 #[test]
-fn install_textmate_bundle_extracts_expected_files() {
-    let dir = tempfile::tempdir().unwrap();
-    Command::cargo_bin("lintropy")
-        .unwrap()
-        .arg("install-textmate-bundle")
-        .arg("--dir")
-        .arg(dir.path())
-        .assert()
-        .code(0)
-        .stdout(predicate::str::contains("extracted"));
-
-    let bundle = dir.path().join("Lintropy Query.tmbundle");
-    assert!(bundle.join("info.plist").is_file());
-    assert!(bundle
-        .join("Syntaxes/lintropy-query.tmLanguage.json")
-        .is_file());
-}
-
-#[test]
-fn install_textmate_bundle_refuses_existing_dir_without_force() {
-    let dir = tempfile::tempdir().unwrap();
-    fs::create_dir_all(dir.path().join("Lintropy Query.tmbundle")).unwrap();
-    Command::cargo_bin("lintropy")
-        .unwrap()
-        .arg("install-textmate-bundle")
-        .arg("--dir")
-        .arg(dir.path())
-        .assert()
-        .code(2)
-        .stderr(predicate::str::contains("refusing to overwrite"));
-}
-
-#[test]
 fn install_lsp_template_jetbrains_extracts_template_files() {
     let dir = tempfile::tempdir().unwrap();
     Command::cargo_bin("lintropy")
@@ -57,10 +24,15 @@ fn install_lsp_template_jetbrains_extracts_template_files() {
         serde_json::from_str(&fs::read_to_string(&template).unwrap()).unwrap();
     assert_eq!(parsed["id"], "lintropy");
     assert_eq!(parsed["programArgs"]["default"], "lintropy lsp");
-    let patterns = parsed["fileTypeMappings"][0]["fileType"]["patterns"]
+    let rust_patterns = parsed["fileTypeMappings"][0]["fileType"]["patterns"]
         .as_array()
         .unwrap();
-    assert!(patterns.iter().any(|p| p == "*.rs"));
+    assert!(rust_patterns.iter().any(|p| p == "*.rs"));
+    let yaml_patterns = parsed["fileTypeMappings"][1]["fileType"]["patterns"]
+        .as_array()
+        .unwrap();
+    assert!(yaml_patterns.iter().any(|p| p == "lintropy.yaml"));
+    assert!(yaml_patterns.iter().any(|p| p == "*.rule.yaml"));
 }
 
 #[test]
@@ -116,7 +88,7 @@ fn install_lsp_extension_rejects_missing_vsix() {
 }
 
 #[test]
-fn install_editor_jetbrains_unpacks_bundle_and_template() {
+fn install_editor_jetbrains_unpacks_lsp4ij_template() {
     let dir = tempfile::tempdir().unwrap();
     Command::cargo_bin("lintropy")
         .unwrap()
@@ -126,14 +98,8 @@ fn install_editor_jetbrains_unpacks_bundle_and_template() {
         .arg(dir.path())
         .assert()
         .code(0)
-        .stdout(predicate::str::contains("Lintropy Query.tmbundle"))
         .stdout(predicate::str::contains("lsp4ij-template"));
 
-    assert!(dir
-        .path()
-        .join("Lintropy Query.tmbundle")
-        .join("info.plist")
-        .is_file());
     assert!(dir
         .path()
         .join("lsp4ij-template")
