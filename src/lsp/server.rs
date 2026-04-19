@@ -20,8 +20,10 @@ use tower_lsp::lsp_types::{
     CodeActionOrCommand, CodeActionParams, CodeActionProviderCapability, CodeActionResponse,
     DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
     DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    InitializeParams, InitializeResult, InitializedParams, MessageType, SemanticTokensFullOptions,
+    SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
+    SemanticTokensServerCapabilities, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Url, WorkDoneProgressOptions,
 };
 use tower_lsp::{Client, LanguageServer};
 
@@ -30,6 +32,7 @@ use crate::core::{Config, PreparedRules};
 use super::actions::{quickfix_for, ranges_intersect};
 use super::diagnostics::to_lsp;
 use super::document::DocumentStore;
+use super::semantic_tokens;
 
 /// Shared LSP backend.
 pub struct Backend {
@@ -184,6 +187,16 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::INCREMENTAL,
                 )),
                 code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+                semantic_tokens_provider: Some(
+                    SemanticTokensServerCapabilities::SemanticTokensOptions(
+                        SemanticTokensOptions {
+                            legend: semantic_tokens::legend(),
+                            full: Some(SemanticTokensFullOptions::Bool(true)),
+                            range: None,
+                            work_done_progress_options: WorkDoneProgressOptions::default(),
+                        },
+                    ),
+                ),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -191,6 +204,21 @@ impl LanguageServer for Backend {
                 version: Some(env!("CARGO_PKG_VERSION").to_string()),
             }),
         })
+    }
+
+    async fn semantic_tokens_full(
+        &self,
+        params: SemanticTokensParams,
+    ) -> JsonRpcResult<Option<SemanticTokensResult>> {
+        let uri = params.text_document.uri;
+        let text = {
+            let state = self.state.lock().await;
+            state.documents.get(&uri).map(|d| d.text.clone())
+        };
+        let Some(text) = text else {
+            return Ok(None);
+        };
+        Ok(semantic_tokens::tokenize(&text).map(SemanticTokensResult::Tokens))
     }
 
     async fn initialized(&self, _: InitializedParams) {

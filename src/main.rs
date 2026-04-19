@@ -38,7 +38,6 @@ fn dispatch(cli: Cli) -> Result<u8, CliError> {
         Some(Command::Config(args)) => commands::validate::run(args),
         Some(Command::TsParse(args)) => commands::ts_parse::run(args),
         Some(Command::InstallEditor(args)) => commands::install_editor::run(args),
-        Some(Command::InstallTextmateBundle(args)) => commands::install_textmate_bundle::run(args),
         Some(Command::InstallLspExtension(args)) => commands::install_lsp_extension::run(args),
         Some(Command::InstallLspTemplate(args)) => commands::install_lsp_template::run(args),
         Some(Command::Lsp) => lintropy::lsp::run(),

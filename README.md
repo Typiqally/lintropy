@@ -224,12 +224,14 @@ lintropy install-editor vscode       # or: cursor
 lintropy install-editor jetbrains --dir ~/.lintropy
 ```
 
-For VS Code / Cursor this installs a single extension that bundles **both**
-the LSP client (live diagnostics, quickfixes, config-reload) **and** the
-`query:` grammar injection that highlights tree-sitter queries inside YAML.
-For JetBrains this unpacks **both** the LSP4IJ template (live diagnostics)
-and the TextMate bundle (query-DSL highlighting) — both still need a one-time
-import in the IDE (see subsections below).
+For VS Code / Cursor this installs a single extension: an LSP client that
+delivers diagnostics, quickfixes, config-reload, **and** semantic-token
+highlighting for the `query:` DSL — all over LSP, no separate grammar
+extension.
+
+For JetBrains this unpacks the LSP4IJ template (which in turn delivers
+diagnostics + `query:` highlighting from the same server). Still needs
+one IDE-side import step — see [JetBrains IDEs](#jetbrains-ides) below.
 
 The rest of this section covers the per-editor details, JSON schema mappings
 for editor-side YAML completion, and the underlying building-block commands.
@@ -249,9 +251,11 @@ lintropy install-editor vscode       # or: cursor
 
 Under the hood this calls `lintropy install-lsp-extension vscode`, which
 downloads the matching `.vsix` from the GitHub release and hands it to
-`code --install-extension`. The extension contributes both live diagnostics
-and the injected `source.lintropy-query` grammar for YAML `query: |` blocks,
-so there is no separate "query syntax" extension to install.
+`code --install-extension`. The extension registers `.rs` files plus
+`lintropy.yaml` / `.lintropy/**/*.yaml` as LSP documents; live diagnostics
+flow for the Rust files and semantic-token highlighting flows for the
+`query: |` DSL inside the YAML rule files. No separate "query syntax"
+extension to install.
 
 Once installed, the extension resolves the `lintropy` binary in this order:
 explicit `lintropy.path` setting → PATH lookup → automatic download from
@@ -283,27 +287,15 @@ same checked-in schema files for:
 If your IDE ignores shared `.idea` files, add the same three mappings manually
 under `Languages & Frameworks | Schemas and DTDs | JSON Schema Mappings`.
 
-#### Assets install
+#### LSP4IJ install
 
 ```console
 lintropy install-editor jetbrains --dir ~/.lintropy
 ```
 
-This unpacks two independent assets side-by-side into `--dir`:
-
-- `Lintropy Query.tmbundle/` — TextMate grammar for the query DSL inside
-  YAML `query: |` blocks.
-- `lsp4ij-template/` — LSP4IJ custom server template for live diagnostics.
-
-Both still need a one-time import in the IDE (JetBrains has no equivalent
-of `code --install-extension`).
-
-##### TextMate bundle import
-
-`Settings → Editor → TextMate Bundles → +` and select the extracted
-`Lintropy Query.tmbundle` directory. The bundle adds a TextMate injection
-that highlights YAML `query: |` blocks using the same
-`source.lintropy-query` grammar as the VS Code / Cursor extension.
+This unpacks the LSP4IJ custom server template to `--dir/lsp4ij-template/`.
+Still needs one import step in the IDE (JetBrains has no equivalent of
+`code --install-extension`).
 
 ##### LSP4IJ server import
 

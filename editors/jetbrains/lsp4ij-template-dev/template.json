@@ -12,6 +12,13 @@
         "patterns": ["*.rs"]
       },
       "languageId": "rust"
+    },
+    {
+      "fileType": {
+        "name": "Lintropy YAML",
+        "patterns": ["lintropy.yaml", "*.rule.yaml", "*.rules.yaml"]
+      },
+      "languageId": "yaml"
     }
   ]
 }

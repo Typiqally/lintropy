@@ -335,3 +335,92 @@ fn code_action_returns_autofix_workspace_edit() {
         "expected quickfix with WorkspaceEdit, got {actions:?}"
     );
 }
+
+#[test]
+fn semantic_tokens_for_query_block_in_yaml_rule_file() {
+    let demo = rust_demo();
+    let mut lsp = LspProcess::spawn(&demo);
+
+    let root_uri = format!("file://{}", demo.display());
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "processId": null,
+            "rootUri": root_uri,
+            "capabilities": {},
+            "workspaceFolders": [{"uri": root_uri, "name": "rust-demo"}]
+        }
+    }));
+    let init = lsp.recv_until(Duration::from_secs(5), |m| m.get("id") == Some(&json!(1)));
+    // Capability advertised.
+    assert!(
+        init.pointer("/result/capabilities/semanticTokensProvider")
+            .is_some(),
+        "server must advertise semanticTokensProvider: {init}"
+    );
+    lsp.send(&json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}));
+
+    let rule_path = demo.join(".lintropy/no-unwrap.rule.yaml");
+    let rule_uri = format!("file://{}", rule_path.display());
+    let rule_text = std::fs::read_to_string(&rule_path).unwrap();
+
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "textDocument/didOpen",
+        "params": {
+            "textDocument": {
+                "uri": rule_uri,
+                "languageId": "yaml",
+                "version": 1,
+                "text": rule_text
+            }
+        }
+    }));
+
+    // YAML files should not produce lint diagnostics (no rules target
+    // the rule files themselves) — drain the empty publish so it
+    // doesn't confuse the next recv.
+    let _ = lsp.recv_until(Duration::from_secs(5), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(rule_uri))
+    });
+
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "textDocument/semanticTokens/full",
+        "params": {
+            "textDocument": {"uri": rule_uri}
+        }
+    }));
+
+    let resp = lsp.recv_until(Duration::from_secs(5), |m| m.get("id") == Some(&json!(2)));
+    let data = resp
+        .pointer("/result/data")
+        .and_then(|v| v.as_array())
+        .expect("tokens array");
+    assert!(
+        !data.is_empty(),
+        "expected semantic tokens for the embedded query DSL, got none"
+    );
+    // Each token is a group of 5 u32s.
+    assert_eq!(
+        data.len() % 5,
+        0,
+        "token array length must be a multiple of 5"
+    );
+
+    // Some token must have type index matching FUNCTION (1) — the
+    // `#eq?` predicate in the no-unwrap query — or VARIABLE (0) for
+    // `@recv` / `@method` / `@match` captures.
+    let token_types: Vec<u64> = data
+        .chunks(5)
+        .map(|chunk| chunk[3].as_u64().unwrap())
+        .collect();
+    assert!(
+        token_types.contains(&0),
+        "expected at least one VARIABLE token (@capture): {token_types:?}"
+    );
+}

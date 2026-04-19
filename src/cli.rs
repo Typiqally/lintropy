@@ -40,10 +40,7 @@ pub enum Command {
     /// Install everything lintropy ships for an editor (one command).
     #[command(name = "install-editor")]
     InstallEditor(InstallEditorArgs),
-    /// Unpack the embedded TextMate bundle (JetBrains `query` highlighting).
-    #[command(name = "install-textmate-bundle")]
-    InstallTextmateBundle(InstallTextmateBundleArgs),
-    /// Install the lintropy extension (grammar + LSP client) into VS Code / Cursor.
+    /// Install the lintropy LSP extension into VS Code / Cursor.
     #[command(name = "install-lsp-extension")]
     InstallLspExtension(InstallLspExtensionArgs),
     /// Unpack the embedded LSP4IJ template (JetBrains LSP client).
@@ -251,18 +248,6 @@ pub struct TsParseArgs {
     /// Override the language derived from the extension.
     #[arg(long, value_name = "NAME")]
     pub lang: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct InstallTextmateBundleArgs {
-    /// Parent directory to unpack the bundle into. Defaults to the
-    /// current working directory; the bundle dir is created beneath it.
-    #[arg(long, value_name = "PATH")]
-    pub dir: Option<PathBuf>,
-
-    /// Overwrite an existing bundle dir in place.
-    #[arg(long)]
-    pub force: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

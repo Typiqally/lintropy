@@ -1,8 +1,8 @@
 # Lintropy for VS Code / Cursor
 
 Live diagnostics, code actions (autofix), autoreload on rule changes, and
-syntax highlighting for tree-sitter `query: |` blocks in `.lintropy/*.yaml`
-files — all in one extension.
+semantic highlighting for tree-sitter `query: |` blocks in `.lintropy/*.yaml`
+files — all delivered over LSP by a single extension.
 
 ## Install
 
@@ -34,11 +34,11 @@ matching release binary into its global storage on first activation (see
 ## How it works
 
 The extension spawns `lintropy lsp` as a subprocess and speaks LSP over
-stdio. Diagnostics, quickfixes, and config reload (on `.lintropy/**/*.yaml`
-changes) all flow through the standard protocol — no custom API. The
-injected `source.lintropy-query` grammar highlights tree-sitter queries
-inside YAML `query: |` blocks — same grammar files as the standalone
-`Lintropy Query.tmbundle` shipped for JetBrains.
+stdio. Diagnostics, quickfixes, config reload (on `.lintropy/**/*.yaml`
+changes), and `query: |` syntax colouring all flow through the standard
+protocol — no custom API. Query colouring is delivered via
+`textDocument/semanticTokens`, so the server is the single source of
+truth for query-DSL highlighting across every LSP-aware editor.
 
 ## Developing
 

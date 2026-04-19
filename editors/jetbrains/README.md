@@ -41,6 +41,9 @@ Use this if the template import fails or you want to customise fields.
      e.g. `/opt/homebrew/bin/lintropy lsp`).
 3. Open the **Mappings** tab and add:
    - **File name patterns** → `*.rs` → language id `rust`.
+   - **File name patterns** → `lintropy.yaml`, `*.rule.yaml`, `*.rules.yaml`
+     → language id `yaml`. This lets the server deliver semantic-token
+     highlighting for the embedded `query: |` DSL.
 4. Open the **Configuration** tab and paste:
    ```json
    {
