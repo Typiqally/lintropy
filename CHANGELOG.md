@@ -113,6 +113,14 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   syntax-only `.vsix`; now that the merged extension is built via
   `vsce package` and released as a GitHub asset, the build-time zip is
   unnecessary (and the `zip` + build-dep `serde_json` drop off).
+- **Inline linting of rule files.** When an open buffer matches
+  `lintropy.yaml` / `.lintropy/**/*.{rule,rules}.yaml`, the LSP server
+  validates each rule's tree-sitter query, reports compile errors
+  anchored to the line (and best-effort column) inside the `query: |`
+  block, flags unknown or missing `language:`, and warns on
+  `{{capture}}` references in `message` / `fix` that don't exist in
+  the query. No waiting for `lintropy check` — red squigglies surface
+  as you type.
 
 ### Changed
 

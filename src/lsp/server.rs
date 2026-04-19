@@ -29,10 +29,21 @@ use tower_lsp::{Client, LanguageServer};
 
 use crate::core::{Config, PreparedRules};
 
+fn is_rule_file(path: &std::path::Path) -> bool {
+    let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+        return false;
+    };
+    name == "lintropy.yaml"
+        || name.ends_with(".rule.yaml")
+        || name.ends_with(".rule.yml")
+        || name.ends_with(".rules.yaml")
+        || name.ends_with(".rules.yml")
+}
+
 use super::actions::{quickfix_for, ranges_intersect};
 use super::diagnostics::to_lsp;
 use super::document::DocumentStore;
-use super::semantic_tokens;
+use super::{rule_lint, semantic_tokens};
 
 /// Shared LSP backend.
 pub struct Backend {
@@ -132,12 +143,16 @@ impl Backend {
     }
 
     async fn publish_with(&self, uri: Url, version: i32, text: &str, path: &std::path::Path) {
-        let lsp_diags = match self.lint(text, path).await {
-            Some(diags) => diags
-                .iter()
-                .map(|d| to_lsp(d, text, None))
-                .collect::<Vec<_>>(),
-            None => Vec::new(),
+        let lsp_diags = if is_rule_file(path) {
+            rule_lint::lint(path, text)
+        } else {
+            match self.lint(text, path).await {
+                Some(diags) => diags
+                    .iter()
+                    .map(|d| to_lsp(d, text, None))
+                    .collect::<Vec<_>>(),
+                None => Vec::new(),
+            }
         };
         self.client
             .publish_diagnostics(uri, lsp_diags, Some(version))
