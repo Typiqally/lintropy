@@ -9,8 +9,8 @@
 //! UTF-8 body). Bringing in a fully-featured LSP client just for this
 //! test would dwarf the test itself.
 
-use std::io::{BufRead, BufReader, Read, Write};
 use std::fs;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::{Duration, Instant};

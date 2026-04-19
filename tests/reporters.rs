@@ -325,9 +325,6 @@ struct FixtureDir {
 
 impl FixtureDir {
     fn new() -> Self {
-        let root = PathBuf::from("/tmp/lintropy-output-tests");
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(&root).unwrap();
         Self {
             temp_dir: TempDir::new_in("/tmp").unwrap(),
         }

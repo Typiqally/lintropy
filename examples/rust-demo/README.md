@@ -42,16 +42,18 @@ Expected diagnostics before `--fix`:
 | `todo-needs-ticket` | `samples/comments/todo_ticket.rs:2` |
 | `safety-comment-required` | `samples/safety/missing_comment.rs:2` |
 | `old-config-removed-2026Q2` | `samples/deprecations/old_config.rs:2` |
+| `no-user-new` | `samples/dynamic/live_reload_probe.rs:4` |
 | `use-tracing-not-log` | `samples/migrations/log_usage.rs:2` |
 | `metric-naming` | `samples/taxonomy/metrics.rs:2` |
 | `no-stray-ignore` | `samples/tests/stray_ignore.rs:1` |
 | `test-name-prefix` | `samples/tests/tokio_naming.rs:2` |
 | `no-unwrap` | `src/main.rs:5` |
 | `no-println` | `src/main.rs:10` |
+| `no-user-new` | `src/main.rs:13` |
 | `user-use-builder` | `src/user.rs:42` |
 | `no-todo` | `tests/smoke.rs:3` |
 
-Expected count: 13 diagnostics across 12 files.
+Expected count: 15 diagnostics across 13 files.
 
 Autofix expectation:
 

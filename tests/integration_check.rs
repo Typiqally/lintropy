@@ -103,8 +103,8 @@ fn check_rust_demo_json_envelope_is_valid() {
             v["version"] == 1
                 && v["diagnostics"]
                     .as_array()
-                    .is_some_and(|items| items.len() == 13)
+                    .is_some_and(|items| items.len() == 15)
                 && v["summary"]["errors"] == 6
-                && v["summary"]["warnings"] == 7
+                && v["summary"]["warnings"] == 9
         }));
 }
