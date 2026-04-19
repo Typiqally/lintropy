@@ -18,13 +18,15 @@
   --md-code-fg-color: #ece8df;
 }
 
-.md-header {
+[data-md-color-primary="black"] .md-header,
+[data-md-color-scheme="slate"] .md-header {
   background: var(--md-default-bg-color);
   box-shadow: none;
   border-bottom: none;
 }
 
-.md-header[data-md-state="shadow"] {
+[data-md-color-primary="black"] .md-header[data-md-state="shadow"],
+[data-md-color-scheme="slate"] .md-header[data-md-state="shadow"] {
   box-shadow: none;
 }
 
@@ -32,7 +34,8 @@
   display: none;
 }
 
-.md-tabs {
+[data-md-color-primary="black"] .md-tabs,
+[data-md-color-scheme="slate"] .md-tabs {
   background: var(--md-default-bg-color);
   color: var(--md-default-fg-color--light);
   border-bottom: none;
