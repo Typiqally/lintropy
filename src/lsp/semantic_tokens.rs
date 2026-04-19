@@ -16,7 +16,7 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 use tower_lsp::lsp_types::{
-    SemanticToken, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
+    SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
 };
 
 /// Token legend advertised in `InitializeResult.capabilities`. The
@@ -25,27 +25,54 @@ use tower_lsp::lsp_types::{
 pub fn legend() -> SemanticTokensLegend {
     SemanticTokensLegend {
         token_types: vec![
-            SemanticTokenType::VARIABLE, // 0: capture `@foo`
-            SemanticTokenType::FUNCTION, // 1: predicate `#has-ancestor?`
-            SemanticTokenType::TYPE,     // 2: node kind `call_expression`
-            SemanticTokenType::STRING,   // 3: `"literal"`
-            SemanticTokenType::NUMBER,   // 4: `-1`, `42`
-            SemanticTokenType::COMMENT,  // 5: `; …`
-            SemanticTokenType::PROPERTY, // 6: field name `function:`, `value:`
-            SemanticTokenType::OPERATOR, // 7: `(`, `)`, `_` wildcard, `:`
+            // Captures — picked `decorator` because `@foo` plays the
+            // same role as a Python decorator or Java annotation and
+            // every default JetBrains/VS Code scheme paints decorators
+            // in a distinctive gold/yellow.
+            SemanticTokenType::DECORATOR, // 0: capture `@foo`
+            // Predicates behave like tree-sitter's built-in "macros".
+            // `macro` maps to the Rust macro colour in default schemes
+            // (purple / magenta), which reads as "meta-level" — matches
+            // the role of `#eq?` / `#has-ancestor?` inside a query.
+            SemanticTokenType::MACRO, // 1: predicate `#eq?`, `#not-has-ancestor?`
+            // Node kinds identify AST *classes* — using `class` rather
+            // than the generic `type` makes the default scheme paint
+            // them in the class colour (turquoise / teal in Darcula)
+            // instead of the dim built-in-type colour.
+            SemanticTokenType::CLASS,   // 2: node kind `call_expression`
+            SemanticTokenType::STRING,  // 3: `"literal"`
+            SemanticTokenType::NUMBER,  // 4: `-1`, `42`
+            SemanticTokenType::COMMENT, // 5: `; …`
+            // Field names are literally properties of the parent node:
+            // `(call_expression function: (…))`. Property colour
+            // (italic purple by default) reads as field-access.
+            SemanticTokenType::PROPERTY, // 6: field name `function:`
+            SemanticTokenType::OPERATOR, // 7: `(`, `)`, `:`, quantifiers `+ * ?`
+            // Wildcard `_` is a query keyword, not a node kind —
+            // keyword colour (bold orange in Darcula) flags it as
+            // special syntax.
+            SemanticTokenType::KEYWORD, // 8: bare `_` wildcard
         ],
-        token_modifiers: vec![],
+        token_modifiers: vec![
+            // `definition` on the `@foo` that introduces a capture so
+            // schemes that distinguish declaration vs. reference can
+            // paint them differently (default scheme bolds definitions).
+            SemanticTokenModifier::DEFINITION,
+        ],
     }
 }
 
-const TOKEN_VARIABLE: u32 = 0;
-const TOKEN_FUNCTION: u32 = 1;
-const TOKEN_TYPE: u32 = 2;
+const TOKEN_DECORATOR: u32 = 0;
+const TOKEN_MACRO: u32 = 1;
+const TOKEN_CLASS: u32 = 2;
 const TOKEN_STRING: u32 = 3;
 const TOKEN_NUMBER: u32 = 4;
 const TOKEN_COMMENT: u32 = 5;
 const TOKEN_PROPERTY: u32 = 6;
 const TOKEN_OPERATOR: u32 = 7;
+const TOKEN_KEYWORD: u32 = 8;
+
+const MOD_DEFINITION: u32 = 1 << 0;
 
 /// Tokenise `src` (a full YAML document) and return LSP semantic tokens
 /// for every recognisable element inside every `query: |` block scalar.
@@ -70,6 +97,19 @@ struct AbsToken {
     character: u32,
     length: u32,
     token_type: u32,
+    token_modifiers: u32,
+}
+
+impl AbsToken {
+    fn plain(line: u32, character: u32, length: u32, token_type: u32) -> Self {
+        Self {
+            line,
+            character,
+            length,
+            token_type,
+            token_modifiers: 0,
+        }
+    }
 }
 
 fn collect_absolute_tokens(src: &str) -> Vec<AbsToken> {
@@ -127,12 +167,7 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
         if byte == b';' {
             let start_char = utf16_col(body, idx);
             let length = body[idx..].encode_utf16().count() as u32;
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length,
-                token_type: TOKEN_COMMENT,
-            });
+            out.push(AbsToken::plain(line, start_char, length, TOKEN_COMMENT));
             return;
         }
 
@@ -141,12 +176,7 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
             let slice = &body[idx..end];
             let start_char = utf16_col(body, idx);
             let length = slice.encode_utf16().count() as u32;
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length,
-                token_type: TOKEN_STRING,
-            });
+            out.push(AbsToken::plain(line, start_char, length, TOKEN_STRING));
             idx = end;
             continue;
         }
@@ -157,11 +187,16 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
                 let slice = &body[idx..end];
                 let start_char = utf16_col(body, idx);
                 let length = slice.encode_utf16().count() as u32;
+                // Every capture inside a query string is a definition —
+                // references (`#eq? @foo "…"`) also carry the same
+                // decorator flavour, but the definition modifier lets
+                // themes bold/italicise the introducing occurrence.
                 out.push(AbsToken {
                     line,
                     character: start_char,
                     length,
-                    token_type: TOKEN_VARIABLE,
+                    token_type: TOKEN_DECORATOR,
+                    token_modifiers: MOD_DEFINITION,
                 });
                 idx = end;
                 continue;
@@ -174,12 +209,7 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
                 let slice = &body[idx..end];
                 let start_char = utf16_col(body, idx);
                 let length = slice.encode_utf16().count() as u32;
-                out.push(AbsToken {
-                    line,
-                    character: start_char,
-                    length,
-                    token_type: TOKEN_FUNCTION,
-                });
+                out.push(AbsToken::plain(line, start_char, length, TOKEN_MACRO));
                 idx = end;
                 continue;
             }
@@ -190,12 +220,7 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
             let slice = &body[idx..end];
             let start_char = utf16_col(body, idx);
             let length = slice.encode_utf16().count() as u32;
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length,
-                token_type: TOKEN_NUMBER,
-            });
+            out.push(AbsToken::plain(line, start_char, length, TOKEN_NUMBER));
             idx = end;
             continue;
         }
@@ -205,37 +230,30 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
             let slice = &body[idx..end];
             let start_char = utf16_col(body, idx);
             let length = slice.encode_utf16().count() as u32;
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length,
-                token_type: TOKEN_NUMBER,
-            });
+            out.push(AbsToken::plain(line, start_char, length, TOKEN_NUMBER));
             idx = end;
             continue;
         }
 
-        if byte == b'(' || byte == b')' {
+        if byte == b'(' || byte == b')' || byte == b'[' || byte == b']' {
             let start_char = utf16_col(body, idx);
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length: 1,
-                token_type: TOKEN_OPERATOR,
-            });
+            out.push(AbsToken::plain(line, start_char, 1, TOKEN_OPERATOR));
+            idx += 1;
+            continue;
+        }
+
+        // Tree-sitter quantifiers on a preceding node/capture.
+        if byte == b'+' || byte == b'*' || byte == b'?' || byte == b'!' || byte == b'.' {
+            let start_char = utf16_col(body, idx);
+            out.push(AbsToken::plain(line, start_char, 1, TOKEN_OPERATOR));
             idx += 1;
             continue;
         }
 
         if byte == b'_' && !is_ident_tail(bytes.get(idx + 1).copied()) {
-            // Bare `_` wildcard — structural, not a node kind.
+            // Bare `_` wildcard — tree-sitter keyword, not a node kind.
             let start_char = utf16_col(body, idx);
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length: 1,
-                token_type: TOKEN_OPERATOR,
-            });
+            out.push(AbsToken::plain(line, start_char, 1, TOKEN_KEYWORD));
             idx += 1;
             continue;
         }
@@ -249,14 +267,9 @@ fn tokenize_query_line(line: u32, body: &str, out: &mut Vec<AbsToken>) {
             let token_type = if bytes.get(end).copied() == Some(b':') {
                 TOKEN_PROPERTY
             } else {
-                TOKEN_TYPE
+                TOKEN_CLASS
             };
-            out.push(AbsToken {
-                line,
-                character: start_char,
-                length,
-                token_type,
-            });
+            out.push(AbsToken::plain(line, start_char, length, token_type));
             idx = end;
             continue;
         }
@@ -336,7 +349,7 @@ fn encode_delta(mut tokens: Vec<AbsToken>) -> Vec<SemanticToken> {
             delta_start,
             length: tok.length,
             token_type: tok.token_type,
-            token_modifiers_bitset: 0,
+            token_modifiers_bitset: tok.token_modifiers,
         });
         prev_line = tok.line;
         prev_char = tok.character;
@@ -366,28 +379,41 @@ query: |
         let tokens = tokenize(src).expect("tokens");
         let types: Vec<u32> = tokens.data.iter().map(|t| t.token_type).collect();
 
-        // call_expression (TYPE), function: (PROPERTY), field_expression
-        // (TYPE), value: (PROPERTY), (_) wildcard (OPERATOR), @recv
-        // (VARIABLE), field: (PROPERTY), field_identifier (TYPE),
-        // @method (VARIABLE), #eq? (FUNCTION), "unwrap" (STRING),
-        // @match (VARIABLE), parens (OPERATOR).
-        assert!(types.contains(&TOKEN_VARIABLE));
-        assert!(types.contains(&TOKEN_FUNCTION));
-        assert!(types.contains(&TOKEN_TYPE));
+        // call_expression (CLASS), function: (PROPERTY), field_expression
+        // (CLASS), value: (PROPERTY), (_) wildcard (KEYWORD), @recv
+        // (DECORATOR), field: (PROPERTY), field_identifier (CLASS),
+        // @method (DECORATOR), #eq? (MACRO), "unwrap" (STRING),
+        // @match (DECORATOR), parens (OPERATOR).
+        assert!(types.contains(&TOKEN_DECORATOR));
+        assert!(types.contains(&TOKEN_MACRO));
+        assert!(types.contains(&TOKEN_CLASS));
         assert!(types.contains(&TOKEN_STRING));
         assert!(types.contains(&TOKEN_PROPERTY));
         assert!(types.contains(&TOKEN_OPERATOR));
+        assert!(types.contains(&TOKEN_KEYWORD));
     }
 
     #[test]
-    fn field_name_followed_by_colon_is_property_not_type() {
+    fn captures_carry_definition_modifier() {
+        let src = "query: |\n  (identifier) @foo\n";
+        let tokens = tokenize(src).expect("tokens");
+        let capture = tokens
+            .data
+            .iter()
+            .find(|t| t.token_type == TOKEN_DECORATOR)
+            .expect("capture token");
+        assert_eq!(capture.token_modifiers_bitset, MOD_DEFINITION);
+    }
+
+    #[test]
+    fn field_name_followed_by_colon_is_property_not_class() {
         let src = "query: |\n  (call function: (_))\n";
         let tokens = tokenize(src).expect("tokens");
-        // `call` (no colon) → TYPE; `function:` → PROPERTY; `_` → OPERATOR.
+        // `call` (no colon) → CLASS; `function:` → PROPERTY; `_` → KEYWORD.
         let types: Vec<u32> = tokens.data.iter().map(|t| t.token_type).collect();
-        assert!(types.contains(&TOKEN_TYPE));
+        assert!(types.contains(&TOKEN_CLASS));
         assert!(types.contains(&TOKEN_PROPERTY));
-        assert!(types.contains(&TOKEN_OPERATOR));
+        assert!(types.contains(&TOKEN_KEYWORD));
     }
 
     #[test]
@@ -427,11 +453,11 @@ rules:
       (string) @y
 ";
         let tokens = tokenize(src).expect("tokens");
-        let variables: Vec<_> = tokens
+        let decorators: Vec<_> = tokens
             .data
             .iter()
-            .filter(|t| t.token_type == TOKEN_VARIABLE)
+            .filter(|t| t.token_type == TOKEN_DECORATOR)
             .collect();
-        assert_eq!(variables.len(), 2);
+        assert_eq!(decorators.len(), 2);
     }
 }
