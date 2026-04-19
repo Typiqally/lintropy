@@ -93,8 +93,15 @@ First release of the Phase 1 MVP (tracked in `specs/merged/2026-04-18-lintropy-m
   (one `.vsix` contributes both the LSP client and the `query: |` grammar
   injection). `install-query-extension` is removed; use
   `install-editor vscode` or `install-lsp-extension vscode`. For JetBrains,
-  `install-editor jetbrains` unpacks both the TextMate bundle (query DSL
-  highlighting) and the LSP4IJ template (live diagnostics) into `--dir`.
+  `install-editor jetbrains` unpacks the LSP4IJ template into `--dir`.
+- **Server-side query DSL highlighting.** `lintropy lsp` now advertises
+  the `textDocument/semanticTokens` capability and tokenises the
+  tree-sitter `query: |` DSL inside `lintropy.yaml` / `.lintropy/**/*.yaml`
+  — captures, predicates, node kinds, strings, numbers, comments. Colours
+  render identically across every LSP-aware editor (VS Code, Cursor,
+  Neovim, Helix, Zed, JetBrains via LSP4IJ). The standalone TextMate
+  bundle and `install-textmate-bundle` subcommand are removed — the
+  server is now the single source of truth for query syntax colouring.
 - **build.rs removed.** The previous build script existed only to pack the
   syntax-only `.vsix`; now that the merged extension is built via
   `vsce package` and released as a GitHub asset, the build-time zip is
