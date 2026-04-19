@@ -185,24 +185,6 @@ pub struct TsParseArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum PluginScope {
-    /// Shared via `.claude/settings.json` in the project. Default.
-    #[default]
-    Project,
-    /// Personal-only install in the user's global Claude Code settings.
-    User,
-}
-
-impl PluginScope {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            PluginScope::Project => "project",
-            PluginScope::User => "user",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum InstallTarget {
     /// VS Code — builds the local extension and runs `code --install-extension`.
@@ -234,11 +216,6 @@ pub struct InstallArgs {
     /// Overwrite existing output directories in place.
     #[arg(long)]
     pub force: bool,
-
-    /// Claude Code: scope for the lintropy skill install (`project` writes
-    /// `./.claude/skills/lintropy/SKILL.md`, `user` writes to `$HOME`).
-    #[arg(long, value_enum, default_value_t = PluginScope::Project)]
-    pub scope: PluginScope,
 
     /// VS Code / Cursor: build the `.vsix` but do not install it.
     #[arg(long = "package-only")]

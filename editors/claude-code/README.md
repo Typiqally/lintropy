@@ -24,13 +24,13 @@ For a local checkout:
 ### CLI
 
 ```console
-lintropy install claude-code                 # --scope project by default
-lintropy install claude-code --scope user    # personal-only (skill target)
+lintropy install claude-code
 ```
 
 The CLI generates this plugin directory freshly (version synced to the
 installed `lintropy`, extension map scoped to compiled-in languages,
-`command` resolved to the absolute binary path) and prints the
+`command` resolved to the absolute binary path), bundles the lintropy
+skill at `skills/lintropy/SKILL.md`, and prints the
 `claude --plugin-dir <path>` invocation to load it. Use
 `/reload-plugins` inside a running session after manifest edits.
 
@@ -38,6 +38,8 @@ installed `lintropy`, extension map scoped to compiled-in languages,
 
 - `.claude-plugin/plugin.json` — registers the `lintropy` LSP server and
   maps the file extensions lintropy knows to their LSP language ids.
+- `skills/lintropy/SKILL.md` — lintropy authoring skill for the agent,
+  bundled so Claude Code loads it whenever the plugin is active.
 
 The `lintropy` binary must be on `PATH`, or override `command` in
 `plugin.json` with an absolute path.

@@ -94,7 +94,7 @@ fn install_claude_code_writes_manifest() {
 }
 
 #[test]
-fn install_claude_code_prints_plugin_dir_invocation() {
+fn install_claude_code_prints_plugin_dir_invocation_and_bundles_skill() {
     let dir = tempfile::tempdir().unwrap();
     let bin_dir = dir.path().join("bin");
     fs::create_dir_all(&bin_dir).unwrap();
@@ -105,13 +105,29 @@ fn install_claude_code_prints_plugin_dir_invocation() {
         .arg("claude-code")
         .arg("--dir")
         .arg(dir.path())
-        .arg("--scope")
-        .arg("user")
         .env("PATH", &bin_dir)
         .assert()
         .code(0)
         .stdout(predicate::str::contains("claude --plugin-dir"))
         .stdout(predicate::str::contains("lintropy-claude-code-plugin"));
+
+    let skill = dir
+        .path()
+        .join("lintropy-claude-code-plugin")
+        .join("skills")
+        .join("lintropy")
+        .join("SKILL.md");
+    assert!(skill.is_file(), "SKILL.md must be bundled inside plugin");
+    let first_line = fs::read_to_string(&skill)
+        .unwrap()
+        .lines()
+        .next()
+        .unwrap()
+        .to_string();
+    assert!(
+        first_line.starts_with("# version:"),
+        "first line must carry `# version:` header, got: {first_line}"
+    );
 }
 
 #[test]
@@ -156,6 +172,26 @@ fn committed_claude_code_plugin_matches_generated_manifest() {
         generated, committed,
         "editors/claude-code/.claude-plugin/plugin.json is out of sync with build_manifest(). \
          Regenerate: `lintropy install claude-code` then copy the file over."
+    );
+}
+
+#[test]
+fn committed_claude_code_skill_matches_canonical() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let canonical = fs::read_to_string(repo_root.join("skill").join("SKILL.md")).unwrap();
+    let bundled = fs::read_to_string(
+        repo_root
+            .join("editors")
+            .join("claude-code")
+            .join("skills")
+            .join("lintropy")
+            .join("SKILL.md"),
+    )
+    .unwrap();
+    assert_eq!(
+        canonical, bundled,
+        "editors/claude-code/skills/lintropy/SKILL.md is out of sync with skill/SKILL.md. \
+         Run `cp skill/SKILL.md editors/claude-code/skills/lintropy/SKILL.md`."
     );
 }
 

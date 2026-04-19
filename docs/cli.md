@@ -146,8 +146,7 @@ lintropy install vscode                          # VS Code
 lintropy install cursor --profile Default        # Cursor, named profile
 lintropy install vscode --package-only -o out.vsix  # just build the .vsix
 lintropy install jetbrains --dir ~/.lintropy     # JetBrains (LSP4IJ)
-lintropy install claude-code                     # Claude Code plugin + skill
-lintropy install claude-code --scope user        # user-scoped skill install
+lintropy install claude-code                     # Claude Code plugin + bundled skill
 ```
 
 For VS Code / Cursor this builds the checked-out extension source with
@@ -155,9 +154,10 @@ For VS Code / Cursor this builds the checked-out extension source with
 or writes it to disk. For JetBrains it unpacks the LSP4IJ custom template
 for a one-time IDE import. For Claude Code it generates the plugin
 manifest fresh (version + feature-gated extension map + absolute binary
-path), materialises the lintropy skill at
-`.claude/skills/lintropy/SKILL.md` for the matching scope, and prints the
-`claude --plugin-dir <path>` invocation needed to load the plugin.
+path), bundles the lintropy skill inside the plugin directory at
+`skills/lintropy/SKILL.md`, and prints the `claude --plugin-dir <path>`
+invocation needed to load the plugin. The skill loads and unloads with
+the plugin.
 
 See [`Integrations`](integrations/index.md) for per-target walkthroughs
 including the Claude Code marketplace flow.

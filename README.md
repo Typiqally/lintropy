@@ -263,11 +263,10 @@ The marketplace manifest lives at the repo root so this works from any clean Cla
 **CLI.** When you want the plugin manifest to pin the absolute path of your local `lintropy` binary:
 
 ```console
-lintropy install claude-code                    # --scope project by default
-lintropy install claude-code --scope user       # personal-only (skill target only)
+lintropy install claude-code
 ```
 
-The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path), writes it into `./lintropy-claude-code-plugin/` alongside the lintropy skill at `.claude/skills/lintropy/SKILL.md`, and prints the `claude --plugin-dir <path>` invocation you should run. Use `/reload-plugins` to pick up edits without restarting.
+The CLI generates the plugin manifest fresh (version synced to `lintropy`, extension map scoped to compiled-in languages, `command` resolved to the absolute binary path) and writes it into `./lintropy-claude-code-plugin/` with the lintropy skill bundled at `skills/lintropy/SKILL.md` inside the same directory, then prints the `claude --plugin-dir <path>` invocation you should run. The skill loads and unloads with the plugin. Use `/reload-plugins` to pick up edits without restarting.
 
 ### JSON Schemas
 

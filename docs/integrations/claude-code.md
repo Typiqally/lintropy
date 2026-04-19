@@ -32,14 +32,12 @@ This reads the same `editors/claude-code/.claude-plugin/plugin.json` straight fr
 lintropy install claude-code
 ```
 
-Generates the plugin manifest fresh (version synced to the installed `lintropy`, extension map scoped to the compiled-in languages, `command` resolved to the absolute binary path), materialises the lintropy skill at `.claude/skills/lintropy/SKILL.md` for the matching scope, and prints the `claude --plugin-dir <path>` invocation you should run to load the plugin. Use `/reload-plugins` inside a running session to pick up manifest edits without restarting.
+Generates the plugin manifest fresh (version synced to the installed `lintropy`, extension map scoped to the compiled-in languages, `command` resolved to the absolute binary path), bundles the lintropy skill at `<plugin-dir>/skills/lintropy/SKILL.md`, and prints the `claude --plugin-dir <path>` invocation you should run to load the plugin. Use `/reload-plugins` inside a running session to pick up manifest edits without restarting.
 
 Why not shell out to `claude plugin install` automatically? Current `claude` CLIs only accept `<name>@<marketplace>` for `install`, and registering a throwaway marketplace per dev iteration is worse ergonomics than `--plugin-dir`. For a persistent install, use the marketplace flow above.
 
 ### Flags
 
-- `--scope project` (default) — skill written to `./.claude/skills/lintropy/`.
-- `--scope user` — skill written to `$HOME/.claude/skills/lintropy/`.
 - `--dir <PATH>` — write the plugin directory somewhere other than the cwd.
 - `--force` — overwrite an existing plugin directory.
 
@@ -48,3 +46,5 @@ Prefer the CLI path when you want the generated `command` to be an absolute path
 ## What the plugin does
 
 It maps YAML, Rust, Go, Python, and TypeScript file extensions to the LSP language ids `lintropy lsp` expects. The extension map is feature-gated, so a binary built without a language feature won't register `lintropy` for that file type. No environment variable is needed — Claude Code's LSP tool activates automatically once a plugin registers a server.
+
+The plugin directory ships a bundled skill at `skills/lintropy/SKILL.md`. Claude Code auto-loads it when the plugin activates and drops it when the plugin is removed, so the skill lifecycle is tied to the plugin.
