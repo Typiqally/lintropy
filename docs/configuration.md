@@ -81,7 +81,7 @@ Current rule fields:
 | `tags` | no | free-form labels |
 | `docs_url` | no | shown in machine-readable output and rule descriptions |
 | `description` | no | human explanation of why the rule exists |
-| `language` | yes for `query` rules | today only `rust` |
+| `language` | yes for `query` rules | `rust`, `go`, `python`, `typescript` |
 | `query` | yes for active rules | Tree-sitter query source |
 | `fix` | no | query rules only |
 
@@ -160,7 +160,7 @@ File-scoped suppression within the first 20 lines:
 Current suppression rules:
 
 - directives must be on their own line
-- only Rust-style `//` comments are supported
+- only `//`-style comments are recognized (Rust, Go, TypeScript); Python `#` comments are not yet supported
 - trailing-code comments are ignored
 - `*` wildcards are rejected
 

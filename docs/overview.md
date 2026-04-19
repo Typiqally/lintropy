@@ -36,16 +36,15 @@ It is not trying to replace a language linter like Clippy or ESLint. The usual s
 Current user-visible behavior:
 
 - structural `query` rules execute
-- `language: rust` is supported
+- Tree-sitter languages: Rust, Go, Python, TypeScript (incl. `.tsx`) — all enabled by default
 - autofix is available for query rules with `fix:`
 - CLI reporting supports text and JSON
-- LSP live diagnostics are available
+- LSP live diagnostics are available, including a Claude Code plugin that registers lintropy as an LSP server
 - editor install helpers exist for VS Code, Cursor, and JetBrains
 
 Not live yet:
 
 - regex-backed `forbid` / `require` rules
-- non-Rust Tree-sitter languages
 
 Those fields already appear in some schemas and docs, but the current loader rejects match rules as Phase 2.
 

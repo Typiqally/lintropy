@@ -23,8 +23,8 @@ Lintropy adds rule metadata, file scoping, interpolation, autofix behavior, and 
 Current engine behavior:
 
 - Only `query` rules execute.
-- Only `language: rust` is supported.
-- Files are linted structurally only when their extension maps to a supported Tree-sitter language. Today that means `.rs`.
+- Supported `language` values: `rust`, `go`, `python`, `typescript` (the last also matches `.tsx`).
+- Files are linted structurally only when their extension maps to a supported Tree-sitter language — `.rs`, `.go`, `.py` / `.pyi`, `.ts` / `.tsx` / `.mts` / `.cts`.
 
 The schema already contains `forbid`, `require`, and `multiline`, but the loader rejects those rule kinds with:
 
@@ -246,7 +246,7 @@ These are not live today:
 - regex-backed `forbid` rules
 - regex-backed `require` rules
 - `multiline: true` runtime behavior
-- languages other than Rust
+- languages beyond `rust`, `go`, `python`, `typescript`
 
 ## Authoring guidance
 
