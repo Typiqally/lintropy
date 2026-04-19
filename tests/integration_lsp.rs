@@ -424,3 +424,67 @@ fn semantic_tokens_for_query_block_in_yaml_rule_file() {
         "expected at least one VARIABLE token (@capture): {token_types:?}"
     );
 }
+
+#[test]
+fn rule_file_with_broken_query_publishes_inline_diagnostic() {
+    let demo = rust_demo();
+    let mut lsp = LspProcess::spawn(&demo);
+
+    let root_uri = format!("file://{}", demo.display());
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "processId": null,
+            "rootUri": root_uri,
+            "capabilities": {},
+            "workspaceFolders": [{"uri": root_uri, "name": "rust-demo"}]
+        }
+    }));
+    let _ = lsp.recv_until(Duration::from_secs(5), |m| m.get("id") == Some(&json!(1)));
+    lsp.send(&json!({"jsonrpc": "2.0", "method": "initialized", "params": {}}));
+
+    let fake_path = demo.join(".lintropy/_scratch-broken.rule.yaml");
+    let fake_uri = format!("file://{}", fake_path.display());
+    let broken = "language: rust\nseverity: warning\nmessage: \"hi\"\nquery: |\n  (call_expression\n    function: (identifier\n";
+    lsp.send(&json!({
+        "jsonrpc": "2.0",
+        "method": "textDocument/didOpen",
+        "params": {
+            "textDocument": {
+                "uri": fake_uri,
+                "languageId": "yaml",
+                "version": 1,
+                "text": broken
+            }
+        }
+    }));
+
+    let publish = lsp.recv_until(Duration::from_secs(5), |msg| {
+        msg.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+            && msg.pointer("/params/uri") == Some(&json!(fake_uri))
+    });
+
+    let diags = publish
+        .pointer("/params/diagnostics")
+        .and_then(|v| v.as_array())
+        .expect("diagnostics array");
+    assert!(
+        !diags.is_empty(),
+        "expected at least one query-compile diagnostic, got {diags:?}"
+    );
+    assert_eq!(
+        diags[0].pointer("/code"),
+        Some(&json!("query-compile")),
+        "{diags:?}"
+    );
+    let line = diags[0]
+        .pointer("/range/start/line")
+        .and_then(|v| v.as_u64())
+        .unwrap();
+    assert!(
+        line >= 4,
+        "diagnostic should land inside the query block: {diags:?}"
+    );
+}

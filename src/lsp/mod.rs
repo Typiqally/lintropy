@@ -10,6 +10,7 @@ mod actions;
 mod diagnostics;
 mod document;
 mod position;
+mod rule_lint;
 mod semantic_tokens;
 mod server;
 
