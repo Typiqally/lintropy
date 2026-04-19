@@ -74,11 +74,18 @@ function buildClient(binary: string): LanguageClient {
     debug: { command: binary, args: ["lsp"], transport: TransportKind.stdio },
   };
 
-  // Lint Rust files and re-lint all open buffers whenever any repo-local
-  // rule YAML changes — the server treats `didChangeWatchedFiles` as a
-  // full config-reload trigger.
+  // Lint Rust files and provide semantic highlighting for `query: |`
+  // DSL blocks inside lintropy YAML rule files. The same watcher re-
+  // lints all open buffers whenever any repo-local rule YAML changes —
+  // the server treats `didChangeWatchedFiles` as a full config-reload
+  // trigger.
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "rust" }],
+    documentSelector: [
+      { scheme: "file", language: "rust" },
+      { scheme: "file", pattern: "**/lintropy.yaml" },
+      { scheme: "file", pattern: "**/.lintropy/**/*.yaml" },
+      { scheme: "file", pattern: "**/.lintropy/**/*.yml" },
+    ],
     synchronize: {
       fileEvents: [
         workspace.createFileSystemWatcher("**/lintropy.yaml"),
