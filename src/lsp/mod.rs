@@ -10,6 +10,7 @@ mod actions;
 mod diagnostics;
 mod document;
 mod position;
+mod semantic_tokens;
 mod server;
 
 use tower_lsp::{LspService, Server};
